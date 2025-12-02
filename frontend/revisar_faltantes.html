@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Revisar Faltantes</title>
+    <link rel="stylesheet" href="estilos/interfaz_inventario.css" />
+  </head>
+  <body>
+    <h1>Revisar Faltantes</h1>
+    <section class="controls">
+      <div class="row">
+        <button id="btn-inventario" class="primary">Ver Inventario</button>
+        <button id="btn-faltantes" class="danger">Ver Faltantes</button>
+        <button id="btn-cotizar" class="primary">Seleccionar para cotización</button>
+      </div>
+    </section>
+    <section>
+      <div id="mensaje"></div>
+      <table>
+        <thead>
+          <tr>
+            <th></th>
+            <th>ID</th>
+            <th>Código</th>
+            <th>Nombre</th>
+            <th>Descripción</th>
+            <th>Stock actual</th>
+            <th>Stock mínimo</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-body"></tbody>
+      </table>
+    </section>
+    <script>
+      const API_INV = "http://localhost:3000/inventario"
+      const tablaBody = document.getElementById("tabla-body")
+      const mensaje = document.getElementById("mensaje")
+      let datos = []
+      const render = () => {
+        tablaBody.innerHTML = ''
+        datos.forEach((item) => {
+          const tr = document.createElement('tr')
+          if (Number(item.stockActual) < Number(item.stockMinimo)) tr.classList.add('critico')
+          tr.innerHTML = `
+            <td><input type="checkbox" data-id="${item.id}" /></td>
+            <td>${item.id ?? ''}</td>
+            <td>${item.codigo ?? ''}</td>
+            <td>${item.nombre ?? ''}</td>
+            <td>${item.descripcion ?? ''}</td>
+            <td>${item.stockActual ?? 0}</td>
+            <td>${item.stockMinimo ?? 0}</td>
+          `
+          tablaBody.appendChild(tr)
+        })
+      }
+      const api = async (url) => {
+        const r = await fetch(url)
+        const d = await r.json()
+        if (!r.ok || d.ok === false) throw new Error(d.message || 'Error')
+        return d
+      }
+      document.getElementById('btn-inventario').addEventListener('click', async () => {
+        try {
+          const d = await api(API_INV)
+          datos = d.data || []
+          mensaje.textContent = ''
+          render()
+        } catch (e) {
+          mensaje.textContent = e.message
+        }
+      })
+      document.getElementById('btn-faltantes').addEventListener('click', async () => {
+        try {
+          const d = await api(`${API_INV}/faltantes`)
+          datos = d.data || []
+          mensaje.textContent = ''
+          render()
+        } catch (e) {
+          mensaje.textContent = e.message
+        }
+      })
+      document.getElementById('btn-cotizar').addEventListener('click', () => {
+        const seleccion = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+          .map((c) => Number(c.getAttribute('data-id')))
+          .filter(Boolean)
+        localStorage.setItem('seleccionCotizacion', JSON.stringify(seleccion))
+        window.location.href = 'enviar_cotizacion.html'
+      })
+      fetch(API_INV).then((r)=>r.json()).then((d)=>{datos=d.data||[];render()}).catch(()=>{})
+    </script>
+  </body>
+</html>

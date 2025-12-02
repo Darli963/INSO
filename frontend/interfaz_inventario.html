@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Inventario</title>
+    <link rel="stylesheet" href="estilos/interfaz_inventario.css" />
+  </head>
+  <body>
+    <h1>Inventario</h1>
+
+    <section class="controls">
+      <div class="row">
+        <input
+          type="text"
+          id="buscar-texto"
+          placeholder="Buscar por nombre o descripcion"
+          style="flex: 1; min-width: 200px"
+        />
+        <button id="btn-buscar">Buscar</button>
+      </div>
+    </section>
+
+    <section>
+      <div id="mensaje"></div>
+      <h3>Datos del producto</h3>
+      <div class="grid">
+        <label
+          >Codigo
+          <input type="text" id="codigo" />
+        </label>
+        <label
+          >Nombre
+          <input type="text" id="nombre" />
+        </label>
+        <label
+          >Descripcion
+          <input type="text" id="descripcion" />
+        </label>
+        <label
+          >Ubicacion
+          <input type="text" id="ubicacion" />
+        </label>
+        <label
+          >Categoria
+          <select id="idCategoria"></select>
+        </label>
+        <label
+          >Proveedor
+          <select id="idProveedor"></select>
+        </label>
+        <label
+          >Stock actual
+          <input type="number" id="stockActual" min="0" value="0" />
+        </label>
+        <label
+          >Stock minimo
+          <input type="number" id="stockMinimo" min="0" value="0" />
+        </label>
+        <label
+          >Stock maximo
+          <input type="number" id="stockMaximo" min="0" value="0" />
+        </label>
+        <label
+          >Precio venta
+          <input type="number" id="precioVenta" min="0" step="0.01" value="0" />
+        </label>
+        <label
+          >Precio compra
+          <input
+            type="number"
+            id="precioCompra"
+            min="0"
+            step="0.01"
+            value="0"
+          />
+        </label>
+        <label
+          >Fecha vencimiento
+          <input type="date" id="fechaVencimiento" />
+        </label>
+        <label
+          >ID para editar
+          <input
+            type="number"
+            id="edit-id"
+            min="1"
+            placeholder="ID existente"
+          />
+        </label>
+      </div>
+      <div class="row" style="margin-top: 10px">
+        <button id="btn-agregar" class="primary">Agregar</button>
+        <button id="btn-editar">Editar</button>
+        <button id="btn-eliminar" class="danger">Eliminar</button>
+        <button id="btn-limpiar">Limpiar</button>
+      </div>
+    </section>
+
+    <section>
+      <h3>Listado</h3>
+      <div
+        class="row"
+        style="
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 6px;
+        "
+      >
+        <div class="row" style="gap: 6px">
+          <label style="min-width: 180px">
+            Ver productos
+            <select id="filtro-nivel-bottom">
+              <option value="todos">Stock actual (todos)</option>
+              <option value="bajo">Bajos en stock</option>
+              <option value="alto">Altos en stock</option>
+            </select>
+          </label>
+        </div>
+        <button id="btn-reportar" class="primary">Imprimir</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Codigo</th>
+            <th>Nombre</th>
+            <th>Descripcion</th>
+            <th>Stock actual</th>
+            <th>Stock minimo</th>
+            <th>Stock maximo</th>
+            <th>Precio venta</th>
+            <th>Precio compra</th>
+            <th>Ubicacion</th>
+            <th>Fecha vencimiento</th>
+            <th>Categoria</th>
+            <th>Proveedor</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-body"></tbody>
+      </table>
+    </section>
+
+    <script>
+      const API_BASE = "http://localhost:3000/inventario";
+      const tablaBody = document.getElementById("tabla-body");
+      const mensaje = document.getElementById("mensaje");
+      let datosActuales = [];
+
+      const categoriasDemo = [
+        { id: "", nombre: "Seleccione" },
+        { id: 1, nombre: "Categoria 1" },
+        { id: 2, nombre: "Categoria 2" },
+      ];
+
+      const proveedoresDemo = [
+        { id: "", nombre: "Seleccione" },
+        { id: 1, nombre: "Proveedor 1" },
+        { id: 2, nombre: "Proveedor 2" },
+      ];
+
+      const fillSelect = (selectId, items) => {
+        const select = document.getElementById(selectId);
+        select.innerHTML = "";
+        items.forEach((item) => {
+          const opt = document.createElement("option");
+          opt.value = item.id;
+          opt.textContent = item.nombre;
+          select.appendChild(opt);
+        });
+      };
+
+      fillSelect("idCategoria", categoriasDemo);
+      fillSelect("idProveedor", proveedoresDemo);
+    
+
+      const limpiarTabla = () => {
+        tablaBody.innerHTML = "";
+      };
+
+      const mostrarMensaje = (texto, tipo = "info") => {
+        mensaje.textContent = texto;
+        mensaje.style.color = tipo === "error" ? "#b00020" : "#1b5e20";
+      };
+
+      const renderTabla = (items = []) => {
+        limpiarTabla();
+        if (!items.length) {
+          mostrarMensaje("Sin datos para mostrar");
+          return;
+        }
+        mensaje.textContent = "";
+        items.forEach((item) => {
+          const tr = document.createElement("tr");
+          if (Number(item.stockActual) < Number(item.stockMinimo))
+            tr.classList.add("critico");
+          if (
+            item.stockMaximo &&
+            Number(item.stockActual) > Number(item.stockMaximo)
+          )
+            tr.classList.add("alto");
+          tr.innerHTML = `
+          <td>${item.id ?? ""}</td>
+          <td>${item.codigo ?? ""}</td>
+          <td>${item.nombre ?? ""}</td>
+          <td>${item.descripcion ?? ""}</td>
+          <td>${item.stockActual ?? 0}</td>
+          <td>${item.stockMinimo ?? 0}</td>
+          <td>${item.stockMaximo ?? ""}</td>
+          <td>${item.precioVenta ?? 0}</td>
+          <td>${item.precioCompra ?? 0}</td>
+          <td>${item.ubicacion ?? ""}</td>
+          <td>${
+            item.fechaVencimiento
+              ? new Date(item.fechaVencimiento).toLocaleDateString()
+              : ""
+          }</td>
+          <td>${item.idCategoria ?? ""}</td>
+          <td>${item.idProveedor ?? ""}</td>
+        `;
+          tablaBody.appendChild(tr);
+        });
+      };
+
+      const aplicarFiltrosLocal = () => {
+        renderTabla(datosActuales);
+      };
+
+      const setDatos = (items = []) => {
+        datosActuales = items;
+        aplicarFiltrosLocal();
+      };
+
+      const apiFetch = async (url, options = {}) => {
+        const response = await fetch(url, {
+          headers: { "Content-Type": "application/json" },
+          ...options,
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data.ok === false)
+          throw new Error(data.message || "Operacion fallida");
+        return data;
+      };
+
+      const buildPayloadFromForm = () => ({
+        codigo: document.getElementById("codigo").value.trim() || null,
+        nombre: document.getElementById("nombre").value.trim(),
+        descripcion: document.getElementById("descripcion").value.trim(),
+        ubicacion: document.getElementById("ubicacion").value.trim(),
+        idCategoria: document.getElementById("idCategoria").value || null,
+        idProveedor: document.getElementById("idProveedor").value || null,
+        stockActual: Number(document.getElementById("stockActual").value || 0),
+        stockMinimo: Number(document.getElementById("stockMinimo").value || 0),
+        stockMaximo: Number(document.getElementById("stockMaximo").value || 0),
+        precioVenta: Number(document.getElementById("precioVenta").value || 0),
+        precioCompra: Number(
+          document.getElementById("precioCompra").value || 0
+        ),
+        fechaVencimiento:
+          document.getElementById("fechaVencimiento").value || null,
+      });
+
+      const limpiarFormulario = () => {
+        document.querySelectorAll("input").forEach((inp) => {
+          if (inp.type !== "button") inp.value = "";
+        });
+        document.getElementById("stockActual").value = 0;
+        document.getElementById("stockMinimo").value = 0;
+        document.getElementById("stockMaximo").value = 0;
+        document.getElementById("precioVenta").value = 0;
+        document.getElementById("precioCompra").value = 0;
+        document.getElementById("idCategoria").value = "";
+        document.getElementById("idProveedor").value = "";
+      };
+
+      const cargarNivel = async (nivel) => {
+        const query =
+          nivel && nivel !== "todos"
+            ? `?nivel=${encodeURIComponent(nivel)}`
+            : "";
+        const data = await apiFetch(`${API_BASE}${query}`);
+        setDatos(data.data || []);
+        const bottomSelect = document.getElementById("filtro-nivel-bottom");
+        if (bottomSelect && nivel) bottomSelect.value = nivel;
+      };
+
+      document
+        .getElementById("btn-buscar")
+        .addEventListener("click", async () => {
+          const term = document.getElementById("buscar-texto").value.trim();
+          if (!term)
+            return mostrarMensaje("Ingresa un texto de busqueda", "error");
+          try {
+            const data = await apiFetch(
+              `${API_BASE}/buscar?q=${encodeURIComponent(term)}`
+            );
+            setDatos(data.data || []);
+          } catch (err) {
+            mostrarMensaje(err.message, "error");
+          }
+        });
+
+      document
+        .getElementById("btn-agregar")
+        .addEventListener("click", async () => {
+          const payload = buildPayloadFromForm();
+          if (!payload.nombre)
+            return mostrarMensaje("El nombre es obligatorio", "error");
+          try {
+            const data = await apiFetch(API_BASE, {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+            mostrarMensaje(data.message || "Producto creado");
+            await cargarNivel(
+              document.getElementById("filtro-nivel").value || "todos"
+            );
+          } catch (err) {
+            mostrarMensaje(err.message, "error");
+          }
+        });
+
+      document
+        .getElementById("btn-editar")
+        .addEventListener("click", async () => {
+          const id = Number(document.getElementById("edit-id").value);
+          if (!id)
+            return mostrarMensaje("Ingresa un ID valido para editar", "error");
+          const payload = buildPayloadFromForm();
+          if (!payload.nombre)
+            return mostrarMensaje("El nombre es obligatorio", "error");
+          try {
+            const data = await apiFetch(`${API_BASE}/${id}`, {
+              method: "PUT",
+              body: JSON.stringify(payload),
+            });
+            mostrarMensaje(data.message || "Producto actualizado");
+            await cargarNivel(
+              document.getElementById("filtro-nivel").value || "todos"
+            );
+          } catch (err) {
+            mostrarMensaje(err.message, "error");
+          }
+        });
+
+      document
+        .getElementById("btn-limpiar")
+        .addEventListener("click", limpiarFormulario);
+
+      document
+        .getElementById("btn-eliminar")
+        .addEventListener("click", async () => {
+          const id = Number(document.getElementById("edit-id").value);
+          if (!id)
+            return mostrarMensaje(
+              "Ingresa un ID valido (ID para editar) para eliminar",
+              "error"
+            );
+          try {
+            const data = await apiFetch(`${API_BASE}/${id}`, {
+              method: "DELETE",
+            });
+            mostrarMensaje(data.message || "Producto eliminado");
+            await cargarNivel(
+              document.getElementById("filtro-nivel").value || "todos"
+            );
+          } catch (err) {
+            mostrarMensaje(err.message, "error");
+          }
+        });
+
+      document
+        .getElementById("btn-reportar")
+        .addEventListener("click", () => window.print());
+
+      document
+        .getElementById("filtro-nivel")
+        .addEventListener("change", async (e) => {
+          try {
+            await cargarNivel(e.target.value);
+          } catch (err) {
+            mostrarMensaje(err.message, "error");
+          }
+        });
+      document
+        .getElementById("filtro-nivel-bottom")
+        .addEventListener("change", async (e) => {
+          try {
+            await cargarNivel(e.target.value);
+          } catch (err) {
+            mostrarMensaje(err.message, "error");
+          }
+        });
+
+      // Carga inicial
+      cargarNivel("todos").catch(() => {});
+    </script>
+  </body>
+</html>

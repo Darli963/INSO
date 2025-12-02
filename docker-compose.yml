@@ -1,0 +1,37 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: sistema_compras_mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=secret
+      - MYSQL_DATABASE=sistema_compras
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build: ./backend
+    container_name: sistema_compras_backend
+    environment:
+      - MYSQL_HOST=sistema_compras_mysql
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=secret
+      - MYSQL_DATABASE=sistema_compras
+      - PORT=3000
+    depends_on:
+      - mysql
+    ports:
+      - "3000:3000"
+
+  frontend:
+    build: ./frontend
+    container_name: sistema_compras_frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  mysql_data:
