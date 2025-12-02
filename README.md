@@ -62,6 +62,4 @@ docker-compose.yml
 .gitignore
 ```
 
-## Notas
-- No se sube `node_modules`, ni artefactos de build; controlado por `.gitignore`.
-- Para exponer públicamente, usar proxy inverso y CORS restringido al dominio del frontend.
+
