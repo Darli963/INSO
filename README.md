@@ -3,6 +3,7 @@
 Proyecto minimal para gestionar inventario y solicitudes de cotización. Arquitectura en tres servicios con Docker: frontend estático (Nginx), API REST (Node.js + Express) y MySQL.
 
 ## Arquitectura
+- Repositorio: git clone --branch main --single-branch https://github.com/Darli963/INSO.git 
 - Frontend: Nginx sirviendo HTML/CSS/JS en `http://localhost:8080/`
 - Backend (API): Express en `http://localhost:3000/`
 - Base de datos: MySQL 8 (puerto local `3307`, interno `3306`) con datos semilla por `database/init.sql`
