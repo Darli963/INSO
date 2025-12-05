@@ -1,9 +1,9 @@
 # Sistema de Compras — Inventario y Cotizaciones
+- Repositorio: git clone --branch main --single-branch https://github.com/Darli963/INSO.git 
 
 Proyecto minimal para gestionar inventario y solicitudes de cotización. Arquitectura en tres servicios con Docker: frontend estático (Nginx), API REST (Node.js + Express) y MySQL.
 
 ## Arquitectura
-- Repositorio: git clone --branch main --single-branch https://github.com/Darli963/INSO.git 
 - Frontend: Nginx sirviendo HTML/CSS/JS en `http://localhost:8080/`
 - Backend (API): Express en `http://localhost:3000/`
 - Base de datos: MySQL 8 (puerto local `3307`, interno `3306`) con datos semilla por `database/init.sql`
@@ -18,6 +18,7 @@ Proyecto minimal para gestionar inventario y solicitudes de cotización. Arquite
   - Frontend: `http://localhost:8080/`
   - API: `http://localhost:3000/`
   - MySQL (CLI host): `127.0.0.1:3307`, user `root`, pass `secret`, DB `sistema_compras`
+  - MySQL CONTENEDOR: docker exec sistema_compras_mysql mysql -uroot -psecret -e "SHOW DATABASES;"
 
 ## Frontend
 - Páginas:
