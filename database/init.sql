@@ -126,7 +126,7 @@ CREATE TABLE IF NOT EXISTS cotizaciones (
   FOREIGN KEY (id_usuario_solicita) REFERENCES usuarios(id_usuario)
 );
 
-CREATE TABLE IF NOT EXISTS detalle_cotizacion (
+CREATE TABLE IF NOT EXISTS detalle_cotizaciones (
   id_detalle INT PRIMARY KEY AUTO_INCREMENT,
   id_cotizacion INT NOT NULL,
   id_producto INT NOT NULL,
@@ -244,12 +244,12 @@ INSERT INTO cotizaciones
  ('2025-05-10', '2025-05-11', 1, 1, 'APROBADA', 'Mejores precios para analgésicos'), 
  ('2025-05-12', NULL,         2, 1, 'PENDIENTE', 'Cotización antibióticos');
 
-INSERT INTO detalle_cotizacion 
- (id_cotizacion, id_producto, cantidad, precio_unitario) 
- VALUES 
- (1, 1, 200, 0.40), 
- (1, 2, 150, 0.45), 
- (2, 3, 100, 0.55);
+INSERT INTO detalle_cotizaciones 
+(id_cotizacion, id_producto, cantidad, precio_unitario) 
+VALUES 
+(1, 1, 200, 0.40), 
+(1, 2, 150, 0.45), 
+(2, 3, 100, 0.55);
 
 INSERT INTO ordenes_compra 
  (codigo, fecha_emision, id_proveedor, id_cotizacion, 
