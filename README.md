@@ -53,6 +53,7 @@ Proyecto minimal para gestionar inventario y solicitudes de cotización. Arquite
 
 ## Estructura
 ```
+
 backend/
   controllers/ db/ routes/ Dockerfile app.js package.json
 frontend/
