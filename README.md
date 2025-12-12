@@ -65,4 +65,14 @@ docker-compose.yml
 .gitignore
 ```
 
+## Reiniciar contenedor
+
+-Para el backend:
+docker compose build backend
+docker compose up -d backend
+
+-Para el frontend:
+docker compose build frontend
+docker compose up -d frontend
+
 
