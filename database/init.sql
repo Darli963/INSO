@@ -20,15 +20,6 @@ CREATE TABLE IF NOT EXISTS usuario (
   estado TINYINT(1) NOT NULL DEFAULT 1
 );
 
--- ==============================================================
--- TABLA: categoria_producto
--- ==============================================================
-CREATE TABLE IF NOT EXISTS categoria_producto (
-  idCategoria INT PRIMARY KEY AUTO_INCREMENT,
-  nombreCategoria VARCHAR(100) NOT NULL,
-  descripcion VARCHAR(200),
-  estado VARCHAR(1) NOT NULL DEFAULT 'A'
-);
 
 -- ==============================================================
 -- TABLA: proveedor
@@ -61,14 +52,10 @@ CREATE TABLE IF NOT EXISTS producto (
   precioCompra DECIMAL(10,2) NOT NULL DEFAULT 0,
   precioVenta DECIMAL(10,2) NOT NULL DEFAULT 0,
   ubicacion VARCHAR(50),
-  lote VARCHAR(50),
   fechaVencimiento DATE,
   estado VARCHAR(1) NOT NULL DEFAULT 'A',
-  idCategoria INT,
   INDEX idx_producto_nombre (nombre),
-  INDEX idx_producto_codigo (codigo),
-  INDEX idx_producto_idCategoria (idCategoria),
-  FOREIGN KEY (idCategoria) REFERENCES categoria_producto(idCategoria)
+  INDEX idx_producto_codigo (codigo)
 );
 
 -- ==============================================================
@@ -169,6 +156,20 @@ CREATE TABLE IF NOT EXISTS cotizacion (
 );
 
 -- ==============================================================
+-- TABLA: cotizacion_proveedor (relación N:M entre cotización y proveedor)
+-- ==============================================================
+CREATE TABLE IF NOT EXISTS cotizacion_proveedor (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  idCotizacion INT NOT NULL,
+  idProveedor INT NOT NULL,
+  estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
+  fechaEnvio DATETIME,
+  UNIQUE KEY uk_cot_prov (idCotizacion, idProveedor),
+  FOREIGN KEY (idCotizacion) REFERENCES cotizacion(idCotizacion),
+  FOREIGN KEY (idProveedor) REFERENCES proveedor(idProveedor)
+);
+
+-- ==============================================================
 -- TABLA: detalle_cotizacion
 -- ==============================================================
 CREATE TABLE IF NOT EXISTS detalle_cotizacion (
@@ -197,12 +198,6 @@ INSERT INTO usuario (nombre, email, passwordHash, rol, estado) VALUES
 ('Jorge López (Contabilidad)', 'jorge.conta@botica.com', 'hash123', 'CONTABILIDAD', 1);
 
 -- Insertar categorías
-INSERT INTO categoria_producto (nombreCategoria, descripcion, estado) VALUES
-('Medicamentos', 'Productos farmacéuticos', 'A'),
-('Material Médico', 'Instrumentos y material médico', 'A'),
-('Insumos', 'Insumos hospitalarios', 'A'),
-('Equipamiento', 'Equipos médicos', 'A'),
-('Limpieza', 'Productos de limpieza y desinfección', 'A');
 
 -- Insertar proveedores
 INSERT INTO proveedor (ruc, razonSocial, nombreComercial, telefono, direccion, email, bancoTipoMoneda, condicionPago, estado) VALUES
@@ -211,17 +206,17 @@ INSERT INTO proveedor (ruc, razonSocial, nombreComercial, telefono, direccion, e
 ('20987654321', 'Productos Naturales Vitales S.A.', 'Vitales', '944555666', 'Av. Naturaleza 789 - Trujillo', 'info@vitales.com', 'Interbank - Soles', 'Crédito 15 días', 'A');
 
 -- Insertar productos
-INSERT INTO producto (codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo, unidadMedida, precioCompra, precioVenta, ubicacion, estado, idCategoria) VALUES
-('P001', 'Paracetamol 500mg', 'Tabletas analgésicas', 200, 50, 500, 'tableta', 0.40, 0.80, 'A1-EST1', 'A', 1),
-('P002', 'Ibuprofeno 400mg', 'Tabletas antiinflamatorias', 150, 40, 400, 'tableta', 0.45, 0.90, 'A1-EST2', 'A', 1),
-('P003', 'Amoxicilina 500mg', 'Cápsulas antibiótico', 100, 30, 300, 'cápsula', 0.55, 1.10, 'A2-EST1', 'A', 1),
-('P004', 'Omeprazol 20mg', 'Cápsulas gastroresistentes', 80, 25, 250, 'cápsula', 0.50, 1.00, 'A2-EST2', 'A', 1),
-('P005', 'Jarabe para la tos', 'Jarabe pediátrico 120ml', 50, 15, 150, 'frasco', 18.90, 35.00, 'B1-EST1', 'A', 1),
-('P006', 'Guantes Nitrilo', 'Talla M, caja x100', 20, 10, 100, 'caja', 25.00, 45.00, 'C1-EST1', 'A', 2),
-('P007', 'Mascarilla Quirúrgica', 'Caja x50 unidades', 150, 50, 300, 'caja', 8.50, 15.00, 'C1-EST2', 'A', 2),
-('P008', 'Termómetro Digital', 'Termómetro infrarrojo', 15, 5, 30, 'unidad', 45.00, 85.00, 'D1-EST1', 'A', 4),
-('P009', 'Alcohol 70%', 'Desinfectante 1 litro', 80, 30, 200, 'litro', 8.00, 15.00, 'E1-EST1', 'A', 5),
-('P010', 'Gasas Estériles', 'Paquete x100 unidades', 60, 20, 150, 'paquete', 12.00, 22.00, 'C2-EST1', 'A', 2);
+INSERT INTO producto (codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo, unidadMedida, precioCompra, precioVenta, ubicacion, estado) VALUES
+('P001', 'Paracetamol 500mg', 'Tabletas analgésicas', 200, 50, 500, 'tableta', 0.40, 0.80, 'A1-EST1', 'A'),
+('P002', 'Ibuprofeno 400mg', 'Tabletas antiinflamatorias', 150, 40, 400, 'tableta', 0.45, 0.90, 'A1-EST2', 'A'),
+('P003', 'Amoxicilina 500mg', 'Cápsulas antibiótico', 100, 30, 300, 'cápsula', 0.55, 1.10, 'A2-EST1', 'A'),
+('P004', 'Omeprazol 20mg', 'Cápsulas gastroresistentes', 80, 25, 250, 'cápsula', 0.50, 1.00, 'A2-EST2', 'A'),
+('P005', 'Jarabe para la tos', 'Jarabe pediátrico 120ml', 50, 15, 150, 'frasco', 18.90, 35.00, 'B1-EST1', 'A'),
+('P006', 'Guantes Nitrilo', 'Talla M, caja x100', 20, 10, 100, 'caja', 25.00, 45.00, 'C1-EST1', 'A'),
+('P007', 'Mascarilla Quirúrgica', 'Caja x50 unidades', 150, 50, 300, 'caja', 8.50, 15.00, 'C1-EST2', 'A'),
+('P008', 'Termómetro Digital', 'Termómetro infrarrojo', 15, 5, 30, 'unidad', 45.00, 85.00, 'D1-EST1', 'A'),
+('P009', 'Alcohol 70%', 'Desinfectante 1 litro', 80, 30, 200, 'litro', 8.00, 15.00, 'E1-EST1', 'A'),
+('P010', 'Gasas Estériles', 'Paquete x100 unidades', 60, 20, 150, 'paquete', 12.00, 22.00, 'C2-EST1', 'A');
 
 -- Insertar recepciones
 INSERT INTO recepcion (fechaRecepcion, tipoComprobante, numComprobante, idProveedor, idUsuario) VALUES

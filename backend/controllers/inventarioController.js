@@ -18,6 +18,9 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const ALLOWED_UNITS = new Set(['unidad','caja','paquete','tableta','cápsula','litro','frasco']);
+const ALLOWED_LOCATIONS = new Set(['A1-EST1','A1-EST2','A2-EST1','A2-EST2','B1-EST1','C1-EST1','C1-EST2','C2-EST1','D1-EST1','E1-EST1']);
+
 
 
 const listarInventario = async (req, res) => {
@@ -25,7 +28,7 @@ const listarInventario = async (req, res) => {
   try {
     const result = await db.query(
       `SELECT idProducto AS id, codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo,
-              unidadMedida, precioCompra, precioVenta, ubicacion, lote, fechaVencimiento, estado, idCategoria
+              unidadMedida, precioCompra, precioVenta, ubicacion, fechaVencimiento, estado
        FROM producto ORDER BY idProducto DESC`
     );
 
@@ -42,7 +45,7 @@ const listarFaltantes = async (req, res) => {
   try {
     const result = await db.query(
       `SELECT idProducto AS id, codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo,
-              unidadMedida, precioCompra, precioVenta, ubicacion, lote, fechaVencimiento, estado, idCategoria
+              unidadMedida, precioCompra, precioVenta, ubicacion, fechaVencimiento, estado
        FROM producto WHERE stockActual < stockMinimo ORDER BY stockActual ASC`
     );
     const rows = getRows(result);
@@ -62,7 +65,7 @@ const buscarInventario = async (req, res) => {
     const likeTerm = `%${term}%`;
     const result = await db.query(
       `SELECT idProducto AS id, codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo,
-              unidadMedida, precioCompra, precioVenta, ubicacion, lote, fechaVencimiento, estado, idCategoria
+              unidadMedida, precioCompra, precioVenta, ubicacion, fechaVencimiento, estado
        FROM producto WHERE nombre LIKE ? OR descripcion LIKE ? OR codigo LIKE ? ORDER BY nombre ASC`,
       [likeTerm, likeTerm, likeTerm]
     );
@@ -85,9 +88,8 @@ const crearProducto = async (req, res) => {
     precioCompra = 0,
     precioVenta = 0,
     ubicacion = '',
-    lote = null,
     fechaVencimiento = null,
-    idCategoria = null,
+    
   } = req.body || {};
 
   if (!nombre) {
@@ -95,6 +97,12 @@ const crearProducto = async (req, res) => {
   }
   if (!unidadMedida) {
     return res.status(400).json({ ok: false, message: 'La unidad de medida es obligatoria' });
+  }
+  if (!ALLOWED_UNITS.has(String(unidadMedida))) {
+    return res.status(400).json({ ok: false, message: 'Unidad de medida inválida. Usa unidad, caja, paquete, tableta, cápsula, litro o frasco' });
+  }
+  if (ubicacion && String(ubicacion).trim() && !ALLOWED_LOCATIONS.has(String(ubicacion))) {
+    return res.status(400).json({ ok: false, message: 'Ubicación inválida. Selecciona una ubicación predefinida' });
   }
 
   try {
@@ -109,16 +117,14 @@ const crearProducto = async (req, res) => {
       toNumber(precioVenta),
       unidadMedida,
       ubicacion || '',
-      lote || null,
       fechaVencimiento || null,
-      idCategoria || null,
     ];
 
     const packet = getPacket(
       await db.query(
         `INSERT INTO producto
-        (codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo, precioCompra, precioVenta, unidadMedida, ubicacion, lote, fechaVencimiento, idCategoria)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo, precioCompra, precioVenta, unidadMedida, ubicacion, fechaVencimiento)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         payload
       )
     );
@@ -146,9 +152,8 @@ const actualizarProducto = async (req, res) => {
     precioCompra = 0,
     precioVenta = 0,
     ubicacion = '',
-    lote = null,
     fechaVencimiento = null,
-    idCategoria = null,
+    
   } = req.body || {};
 
   if (!id) {
@@ -160,6 +165,12 @@ const actualizarProducto = async (req, res) => {
   }
   if (!unidadMedida) {
     return res.status(400).json({ ok: false, message: 'La unidad de medida es obligatoria' });
+  }
+  if (!ALLOWED_UNITS.has(String(unidadMedida))) {
+    return res.status(400).json({ ok: false, message: 'Unidad de medida inválida. Usa unidad, caja, paquete, tableta, cápsula, litro o frasco' });
+  }
+  if (ubicacion && String(ubicacion).trim() && !ALLOWED_LOCATIONS.has(String(ubicacion))) {
+    return res.status(400).json({ ok: false, message: 'Ubicación inválida. Selecciona una ubicación predefinida' });
   }
 
   try {
@@ -174,9 +185,7 @@ const actualizarProducto = async (req, res) => {
       toNumber(precioVenta),
       unidadMedida,
       ubicacion || '',
-      lote || null,
       fechaVencimiento || null,
-      idCategoria || null,
       id,
     ];
 
@@ -184,7 +193,7 @@ const actualizarProducto = async (req, res) => {
       await db.query(
         `UPDATE producto
          SET codigo = ?, nombre = ?, descripcion = ?, stockActual = ?, stockMinimo = ?, stockMaximo = ?,
-             precioCompra = ?, precioVenta = ?, unidadMedida = ?, ubicacion = ?, lote = ?, fechaVencimiento = ?, idCategoria = ?
+             precioCompra = ?, precioVenta = ?, unidadMedida = ?, ubicacion = ?, fechaVencimiento = ?
          WHERE idProducto = ?`,
         payload
       )

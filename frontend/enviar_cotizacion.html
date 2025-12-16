@@ -8,8 +8,8 @@
   <body>
     <h1>Enviar Cotización</h1>
     <section>
-      <label>Proveedor
-        <select id="proveedor"></select>
+      <label>Proveedores
+        <select id="proveedores" multiple size="5"></select>
       </label>
       <div id="mensaje"></div>
     </section>
@@ -32,7 +32,7 @@
     <script>
       const API_PROV = 'http://localhost:3000/cotizaciones/proveedores'
       const API_COTZ = 'http://localhost:3000/cotizaciones/enviar'
-      const proveedorSel = document.getElementById('proveedor')
+      const proveedoresSel = document.getElementById('proveedores')
       const tabla = document.getElementById('tabla')
       const mensaje = document.getElementById('mensaje')
       let productos = []
@@ -40,18 +40,18 @@
       const api = async (url, options={}) => {
         const r = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...options })
         const d = await r.json().catch(()=>({}))
-        if (!r.ok || d.ok === false) throw new Error(d.message || 'Error')
+        if (!r.ok || d.ok === false) throw new Error(d.message || 'Error desconocido')
         return d
       }
 
       const cargarProveedores = async () => {
         const d = await api(API_PROV)
-        proveedorSel.innerHTML = ''
+        proveedoresSel.innerHTML = ''
         d.data.forEach(p => {
           const o = document.createElement('option')
           o.value = p.id
           o.textContent = p.nombre
-          proveedorSel.appendChild(o)
+          proveedoresSel.appendChild(o)
         })
       }
 
@@ -79,14 +79,15 @@
 
       document.getElementById('btn-enviar').addEventListener('click', async () => {
         try {
-          const proveedorId = Number(proveedorSel.value)
+          const proveedorIds = Array.from(proveedoresSel.selectedOptions).map(o => Number(o.value)).filter(Boolean)
           const items = Array.from(document.querySelectorAll('input[type="number"][data-id]')).map(inp => ({
             productoId: Number(inp.getAttribute('data-id')),
             cantidad: Number(inp.value||1)
           }))
           if (!items.length) { mensaje.textContent = 'Selecciona al menos un producto'; return }
+          if (!proveedorIds.length) { mensaje.textContent = 'Selecciona al menos un proveedor'; return }
           if (items.some(it => !Number.isFinite(it.cantidad) || it.cantidad <= 0)) { mensaje.textContent = 'Las cantidades deben ser mayores a cero'; return }
-          const d = await api(API_COTZ, { method: 'POST', body: JSON.stringify({ proveedorId, items }) })
+          const d = await api(API_COTZ, { method: 'POST', body: JSON.stringify({ proveedorIds, items }) })
           mensaje.textContent = `Cotización enviada. ID: ${d.id}`
           localStorage.removeItem('seleccionCotizacion')
         } catch (e) {

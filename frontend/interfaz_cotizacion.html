@@ -60,7 +60,7 @@
       const api = async (url) => {
         const r = await fetch(url)
         const d = await r.json()
-        if (!r.ok || d.ok === false) throw new Error(d.message || 'Error')
+        if (!r.ok || d.ok === false) throw new Error(d.message || 'Error desconocido')
         return d
       }
       document.getElementById('btn-inventario').addEventListener('click', async () => {

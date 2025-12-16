@@ -19,16 +19,19 @@ const listarProveedores = async (req, res) => {
 }
 
 const enviarCotizacion = async (req, res) => {
-  const { proveedorId, items = [], observaciones = null } = req.body || {}
-  if (!proveedorId || !Array.isArray(items) || items.length === 0) {
+  const { proveedorId, proveedorIds, items = [], observaciones = null } = req.body || {}
+  const ids = Array.isArray(proveedorIds) ? proveedorIds.map(Number).filter(Boolean) : (proveedorId ? [Number(proveedorId)] : [])
+  if (!ids.length || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ ok: false, message: 'Datos de cotizacion incompletos' })
   }
   try {
-    const provRows = getRows(
-      await db.query('SELECT idProveedor FROM proveedor WHERE idProveedor = ?', [Number(proveedorId)])
-    )
-    if (!provRows.length) {
-      return res.status(404).json({ ok: false, message: 'Proveedor no existe' })
+    for (const pid of ids) {
+      const provRows = getRows(
+        await db.query('SELECT idProveedor FROM proveedor WHERE idProveedor = ?', [Number(pid)])
+      )
+      if (!provRows.length) {
+        return res.status(404).json({ ok: false, message: `Proveedor ${pid} no existe` })
+      }
     }
 
     for (const item of items) {
@@ -59,7 +62,7 @@ const enviarCotizacion = async (req, res) => {
 
     const insertRes = await db.query(
       'INSERT INTO cotizacion (fechaSolicitud, idProveedor, estado, observaciones, total) VALUES (?, ?, ?, ?, ?)',
-      [fechaSolicitud, Number(proveedorId), 'PENDIENTE', observaciones, total]
+      [fechaSolicitud, Number(ids[0]), 'PENDIENTE', observaciones, total]
     )
     const idCotizacion = Array.isArray(insertRes) && insertRes[0]?.insertId ? insertRes[0].insertId : null
     if (!idCotizacion) {
@@ -74,6 +77,13 @@ const enviarCotizacion = async (req, res) => {
       await db.query(
         'INSERT INTO detalle_cotizacion (idCotizacion, idProducto, cantidad, precioUnitario, subtotal, observacion) VALUES (?, ?, ?, ?, ?, ?)',
         [idCotizacion, productoId, cantidad, precioUnitario, subtotal, null]
+      )
+    }
+
+    for (const pid of ids) {
+      await db.query(
+        'INSERT IGNORE INTO cotizacion_proveedor (idCotizacion, idProveedor, estado, fechaEnvio) VALUES (?, ?, ?, ?)',
+        [idCotizacion, Number(pid), 'PENDIENTE', null]
       )
     }
 

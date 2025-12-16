@@ -38,15 +38,32 @@
         </label>
         <label
           >Unidad de medida
-          <input type="text" id="unidadMedida" />
+          <select id="unidadMedida">
+            <option value="">Selecciona unidad</option>
+            <option value="unidad">unidad</option>
+            <option value="caja">caja</option>
+            <option value="paquete">paquete</option>
+            <option value="tableta">tableta</option>
+            <option value="cápsula">cápsula</option>
+            <option value="litro">litro</option>
+            <option value="frasco">frasco</option>
+          </select>
         </label>
         <label
-          >Ubicacion
-          <input type="text" id="ubicacion" />
-        </label>
-        <label
-          >Categoria
-          <select id="idCategoria"></select>
+          >Ubicación
+          <select id="ubicacion">
+            <option value="">Selecciona ubicación</option>
+            <option value="A1-EST1">A1-EST1</option>
+            <option value="A1-EST2">A1-EST2</option>
+            <option value="A2-EST1">A2-EST1</option>
+            <option value="A2-EST2">A2-EST2</option>
+            <option value="B1-EST1">B1-EST1</option>
+            <option value="C1-EST1">C1-EST1</option>
+            <option value="C1-EST2">C1-EST2</option>
+            <option value="C2-EST1">C2-EST1</option>
+            <option value="D1-EST1">D1-EST1</option>
+            <option value="E1-EST1">E1-EST1</option>
+          </select>
         </label>
         <label
           >Stock actual
@@ -73,10 +90,6 @@
             step="0.01"
             value="0"
           />
-        </label>
-        <label
-          >Lote
-          <input type="text" id="lote" />
         </label>
         <label
           >Fecha vencimiento
@@ -136,9 +149,7 @@
             <th>Precio venta</th>
             <th>Precio compra</th>
             <th>Ubicacion</th>
-            <th>Lote</th>
             <th>Fecha vencimiento</th>
-            <th>Categoria</th>
           </tr>
         </thead>
         <tbody id="tabla-body"></tbody>
@@ -153,24 +164,7 @@
       const mensaje = document.getElementById("mensaje");
       let datosActuales = [];
 
-      const categoriasDemo = [
-        { id: "", nombre: "Seleccione" },
-        { id: 1, nombre: "Categoria 1" },
-        { id: 2, nombre: "Categoria 2" },
-      ];
-
-      const fillSelect = (selectId, items) => {
-        const select = document.getElementById(selectId);
-        select.innerHTML = "";
-        items.forEach((item) => {
-          const opt = document.createElement("option");
-          opt.value = item.id;
-          opt.textContent = item.nombre;
-          select.appendChild(opt);
-        });
-      };
-
-      fillSelect("idCategoria", categoriasDemo);
+      
     
 
       const limpiarTabla = () => {
@@ -210,13 +204,11 @@
           <td>${item.precioVenta ?? 0}</td>
           <td>${item.precioCompra ?? 0}</td>
           <td>${item.ubicacion ?? ""}</td>
-          <td>${item.lote ?? ""}</td>
           <td>${
             item.fechaVencimiento
               ? new Date(item.fechaVencimiento).toLocaleDateString()
               : ""
           }</td>
-          <td>${item.idCategoria ?? ""}</td>
         `;
           tablaBody.appendChild(tr);
         });
@@ -242,37 +234,47 @@
         return data;
       };
 
+      const getVal = (id) => {
+        const el = document.getElementById(id);
+        if (!el) return "";
+        const v = el.value ?? "";
+        return typeof v === "string" ? v.trim() : v;
+      };
+      const getNum = (id, def = 0) => {
+        const v = Number(getVal(id) || def);
+        return Number.isFinite(v) ? v : def;
+      };
+
       const buildPayloadFromForm = () => ({
-        codigo: document.getElementById("codigo").value.trim() || null,
-        nombre: document.getElementById("nombre").value.trim(),
-        descripcion: document.getElementById("descripcion").value.trim(),
-        unidadMedida: document.getElementById("unidadMedida").value.trim(),
-        ubicacion: document.getElementById("ubicacion").value.trim(),
-        idCategoria: document.getElementById("idCategoria").value || null,
-        stockActual: Number(document.getElementById("stockActual").value || 0),
-        stockMinimo: Number(document.getElementById("stockMinimo").value || 0),
-        stockMaximo: Number(document.getElementById("stockMaximo").value || 0),
-        precioVenta: Number(document.getElementById("precioVenta").value || 0),
-        precioCompra: Number(
-          document.getElementById("precioCompra").value || 0
-        ),
-        lote: document.getElementById("lote").value.trim() || null,
-        fechaVencimiento:
-          document.getElementById("fechaVencimiento").value || null,
+        codigo: getVal("codigo") || null,
+        nombre: getVal("nombre"),
+        descripcion: getVal("descripcion"),
+        unidadMedida: getVal("unidadMedida"),
+        ubicacion: getVal("ubicacion"),
+        stockActual: getNum("stockActual", 0),
+        stockMinimo: getNum("stockMinimo", 0),
+        stockMaximo: getNum("stockMaximo", 0),
+        precioVenta: getNum("precioVenta", 0),
+        precioCompra: getNum("precioCompra", 0),
+        fechaVencimiento: getVal("fechaVencimiento") || null,
       });
 
       const limpiarFormulario = () => {
         document.querySelectorAll("input").forEach((inp) => {
           if (inp.type !== "button") inp.value = "";
         });
-        document.getElementById("stockActual").value = 0;
-        document.getElementById("stockMinimo").value = 0;
-        document.getElementById("stockMaximo").value = 0;
-        document.getElementById("precioVenta").value = 0;
-        document.getElementById("precioCompra").value = 0;
-        document.getElementById("idCategoria").value = "";
-        document.getElementById("unidadMedida").value = "";
-        document.getElementById("lote").value = "";
+        const setVal = (id, val) => {
+          const el = document.getElementById(id);
+          if (el) el.value = val;
+        };
+        setVal("stockActual", 0);
+        setVal("stockMinimo", 0);
+        setVal("stockMaximo", 0);
+        setVal("precioVenta", 0);
+        setVal("precioCompra", 0);
+        setVal("unidadMedida", "");
+        setVal("ubicacion", "");
+        setVal("fechaVencimiento", "");
       };
 
       const cargarNivel = async (nivel = "todos") => {
@@ -320,7 +322,7 @@
             });
             mostrarMensaje(data.message || "Producto creado");
             await cargarNivel(
-              document.getElementById("filtro-nivel").value || "todos"
+              document.getElementById("filtro-nivel-bottom").value || "todos"
             );
           } catch (err) {
             mostrarMensaje(err.message, "error");
@@ -343,7 +345,7 @@
             });
             mostrarMensaje(data.message || "Producto actualizado");
             await cargarNivel(
-              document.getElementById("filtro-nivel").value || "todos"
+              document.getElementById("filtro-nivel-bottom").value || "todos"
             );
           } catch (err) {
             mostrarMensaje(err.message, "error");
@@ -369,7 +371,7 @@
             });
             mostrarMensaje(data.message || "Producto eliminado");
             await cargarNivel(
-              document.getElementById("filtro-nivel").value || "todos"
+              document.getElementById("filtro-nivel-bottom").value || "todos"
             );
           } catch (err) {
             mostrarMensaje(err.message, "error");
