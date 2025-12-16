@@ -141,53 +141,61 @@ const crearProducto = async (req, res) => {
 
 const actualizarProducto = async (req, res) => {
   const id = Number(req.params.id);
-  const body = req.body || {};
+  const {
+    codigo = null,
+    nombre,
+    descripcion = '',
+    stockActual = 0,
+    stockMinimo = 0,
+    stockMaximo = null,
+    unidadMedida,
+    precioCompra = 0,
+    precioVenta = 0,
+    ubicacion = '',
+    fechaVencimiento = null,
+    
+  } = req.body || {};
 
   if (!id) {
     return res.status(400).json({ ok: false, message: 'ID invalido' });
   }
 
-  const fields = {};
-  if (body.codigo !== undefined) fields.codigo = body.codigo || null;
-  if (body.nombre !== undefined) fields.nombre = body.nombre;
-  if (body.descripcion !== undefined) fields.descripcion = body.descripcion || '';
-  if (body.stockActual !== undefined) fields.stockActual = toNumber(body.stockActual);
-  if (body.stockMinimo !== undefined) fields.stockMinimo = toNumber(body.stockMinimo);
-  if (body.stockMaximo !== undefined) fields.stockMaximo = body.stockMaximo !== null ? toNumber(body.stockMaximo) : null;
-  if (body.precioCompra !== undefined) fields.precioCompra = toNumber(body.precioCompra);
-  if (body.precioVenta !== undefined) fields.precioVenta = toNumber(body.precioVenta);
-  if (body.unidadMedida !== undefined) fields.unidadMedida = body.unidadMedida;
-  if (body.ubicacion !== undefined) fields.ubicacion = body.ubicacion || '';
-  if (body.fechaVencimiento !== undefined) fields.fechaVencimiento = body.fechaVencimiento || null;
-
-  if (fields.unidadMedida !== undefined) {
-    if (!fields.unidadMedida) {
-      return res.status(400).json({ ok: false, message: 'La unidad de medida es obligatoria' });
-    }
-    if (!ALLOWED_UNITS.has(String(fields.unidadMedida))) {
-      return res.status(400).json({ ok: false, message: 'Unidad de medida inválida. Usa unidad, caja, paquete, tableta, cápsula, litro o frasco' });
-    }
+  if (!nombre) {
+    return res.status(400).json({ ok: false, message: 'El nombre del producto es obligatorio' });
   }
-  if (fields.ubicacion !== undefined) {
-    if (fields.ubicacion && String(fields.ubicacion).trim() && !ALLOWED_LOCATIONS.has(String(fields.ubicacion))) {
-      return res.status(400).json({ ok: false, message: 'Ubicación inválida. Selecciona una ubicación predefinida' });
-    }
+  if (!unidadMedida) {
+    return res.status(400).json({ ok: false, message: 'La unidad de medida es obligatoria' });
   }
-
-  const keys = Object.keys(fields);
-  if (keys.length === 0) {
-    return res.status(400).json({ ok: false, message: 'No hay campos para actualizar' });
+  if (!ALLOWED_UNITS.has(String(unidadMedida))) {
+    return res.status(400).json({ ok: false, message: 'Unidad de medida inválida. Usa unidad, caja, paquete, tableta, cápsula, litro o frasco' });
   }
-
-  const setClause = keys.map((k) => `${k} = ?`).join(', ');
-  const params = keys.map((k) => fields[k]);
-  params.push(id);
+  if (ubicacion && String(ubicacion).trim() && !ALLOWED_LOCATIONS.has(String(ubicacion))) {
+    return res.status(400).json({ ok: false, message: 'Ubicación inválida. Selecciona una ubicación predefinida' });
+  }
 
   try {
+    const payload = [
+      codigo || null,
+      nombre,
+      descripcion,
+      toNumber(stockActual),
+      toNumber(stockMinimo),
+      stockMaximo !== null ? toNumber(stockMaximo) : null,
+      toNumber(precioCompra),
+      toNumber(precioVenta),
+      unidadMedida,
+      ubicacion || '',
+      fechaVencimiento || null,
+      id,
+    ];
+
     const packet = getPacket(
       await db.query(
-        `UPDATE producto SET ${setClause} WHERE idProducto = ?`,
-        params
+        `UPDATE producto
+         SET codigo = ?, nombre = ?, descripcion = ?, stockActual = ?, stockMinimo = ?, stockMaximo = ?,
+             precioCompra = ?, precioVenta = ?, unidadMedida = ?, ubicacion = ?, fechaVencimiento = ?
+         WHERE idProducto = ?`,
+        payload
       )
     );
 
