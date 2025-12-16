@@ -67,29 +67,23 @@
         </label>
         <label
           >Stock actual
-          <input type="number" id="stockActual" min="0" value="0" />
+          <input type="number" id="stockActual" min="0" />
         </label>
         <label
           >Stock minimo
-          <input type="number" id="stockMinimo" min="0" value="0" />
+          <input type="number" id="stockMinimo" min="0" />
         </label>
         <label
           >Stock maximo
-          <input type="number" id="stockMaximo" min="0" value="0" />
+          <input type="number" id="stockMaximo" min="0" />
         </label>
         <label
           >Precio venta
-          <input type="number" id="precioVenta" min="0" step="0.01" value="0" />
+          <input type="number" id="precioVenta" min="0" step="0.01" />
         </label>
         <label
           >Precio compra
-          <input
-            type="number"
-            id="precioCompra"
-            min="0"
-            step="0.01"
-            value="0"
-          />
+          <input type="number" id="precioCompra" min="0" step="0.01" />
         </label>
         <label
           >Fecha vencimiento
@@ -259,6 +253,33 @@
         fechaVencimiento: getVal("fechaVencimiento") || null,
       });
 
+      const buildUpdatePayloadFromForm = () => {
+        const p = {};
+        const vCodigo = getVal("codigo");
+        const vNombre = getVal("nombre");
+        const vDescripcion = getVal("descripcion");
+        const vUnidad = getVal("unidadMedida");
+        const vUbicacion = getVal("ubicacion");
+        const vStockActualRaw = getVal("stockActual");
+        const vStockMinimoRaw = getVal("stockMinimo");
+        const vStockMaximoRaw = getVal("stockMaximo");
+        const vPrecioVentaRaw = getVal("precioVenta");
+        const vPrecioCompraRaw = getVal("precioCompra");
+        const vFecha = getVal("fechaVencimiento");
+        if (vCodigo !== "") p.codigo = vCodigo || null;
+        if (vNombre !== "") p.nombre = vNombre;
+        if (vDescripcion !== "") p.descripcion = vDescripcion;
+        if (vUnidad !== "") p.unidadMedida = vUnidad;
+        if (vUbicacion !== "") p.ubicacion = vUbicacion;
+        if (vStockActualRaw !== "") p.stockActual = getNum("stockActual", 0);
+        if (vStockMinimoRaw !== "") p.stockMinimo = getNum("stockMinimo", 0);
+        if (vStockMaximoRaw !== "") p.stockMaximo = getNum("stockMaximo", 0);
+        if (vPrecioVentaRaw !== "") p.precioVenta = getNum("precioVenta", 0);
+        if (vPrecioCompraRaw !== "") p.precioCompra = getNum("precioCompra", 0);
+        if (vFecha !== "") p.fechaVencimiento = vFecha || null;
+        return p;
+      };
+
       const limpiarFormulario = () => {
         document.querySelectorAll("input").forEach((inp) => {
           if (inp.type !== "button") inp.value = "";
@@ -267,11 +288,11 @@
           const el = document.getElementById(id);
           if (el) el.value = val;
         };
-        setVal("stockActual", 0);
-        setVal("stockMinimo", 0);
-        setVal("stockMaximo", 0);
-        setVal("precioVenta", 0);
-        setVal("precioCompra", 0);
+        setVal("stockActual", "");
+        setVal("stockMinimo", "");
+        setVal("stockMaximo", "");
+        setVal("precioVenta", "");
+        setVal("precioCompra", "");
         setVal("unidadMedida", "");
         setVal("ubicacion", "");
         setVal("fechaVencimiento", "");
@@ -335,9 +356,9 @@
           const id = Number(document.getElementById("edit-id").value);
           if (!id)
             return mostrarMensaje("Ingresa un ID valido para editar", "error");
-          const payload = buildPayloadFromForm();
-          if (!payload.nombre)
-            return mostrarMensaje("El nombre es obligatorio", "error");
+          const payload = buildUpdatePayloadFromForm();
+          if (Object.keys(payload).length === 0)
+            return mostrarMensaje("No hay cambios para actualizar", "error");
           try {
             const data = await apiFetch(`${API_BASE}/${id}`, {
               method: "PUT",
