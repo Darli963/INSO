@@ -3,15 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <title>Revisar Faltantes</title>
-    <link rel="stylesheet" href="estilos/interfaz_inventario.css" />
+    <link rel="stylesheet" href="estilos/interfaz.css" />
   </head>
   <body>
-    <h1>Revisar Faltantes</h1>
+    <h1>Enviar Cotización</h1>
     <section class="controls">
       <div class="row">
         <button id="btn-inventario" class="primary">Ver Inventario</button>
         <button id="btn-faltantes" class="danger">Ver Faltantes</button>
-        <button id="btn-cotizar" class="primary">Seleccionar para cotización</button>
       </div>
     </section>
     <section>
@@ -31,6 +30,11 @@
         <tbody id="tabla-body"></tbody>
       </table>
     </section>
+
+            <button id="btn-cotizar" class="primary">Seleccionar para cotización</button>
+
+
+            
     <script>
       const API_INV = "http://localhost:3000/inventario"
       const tablaBody = document.getElementById("tabla-body")

@@ -1,7 +1,6 @@
 
 const db = require('../db/mysqlAdapter');
 
-// Helpers to normalize mysql2 outputs without assuming adapter internals
 const getRows = (result) => {
   if (Array.isArray(result) && Array.isArray(result[0])) {
     return result[0];
@@ -19,37 +18,31 @@ const toNumber = (value, fallback = 0) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-// Armamos filtros según nivel de stock (tomando columnas del diagrama de BD: stockActual, stockMinimo, stockMaximo)
-const buildNivelFiltro = (nivel) => {
-  const n = (nivel || '').toLowerCase();
-  if (n === 'bajo') return { where: 'WHERE stockActual < stockMinimo', params: [] };
-  if (n === 'alto') return { where: 'WHERE stockMaximo IS NOT NULL AND stockActual > stockMaximo', params: [] };
-  return { where: '', params: [] };
-};
 
-// GET /inventario?nivel=todos|bajo|alto
+
 const listarInventario = async (req, res) => {
-  const { where, params } = buildNivelFiltro(req.query.nivel);
+  
   try {
     const result = await db.query(
       `SELECT idProducto AS id, codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo,
-              precioVenta, precioCompra, ubicacion, fechaVencimiento, idCategoria, idProveedor
-       FROM producto ${where} ORDER BY idProducto DESC`,
-      params
+              unidadMedida, precioCompra, precioVenta, ubicacion, lote, fechaVencimiento, estado, idCategoria
+       FROM producto ORDER BY idProducto DESC`
     );
+
     const rows = getRows(result);
     res.json({ ok: true, data: rows });
+
   } catch (error) {
     res.status(500).json({ ok: false, message: 'Error al obtener inventario', error: error.message });
   }
 };
 
-// GET /inventario/faltantes
+
 const listarFaltantes = async (req, res) => {
   try {
     const result = await db.query(
       `SELECT idProducto AS id, codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo,
-              precioVenta, precioCompra, ubicacion, fechaVencimiento, idCategoria, idProveedor
+              unidadMedida, precioCompra, precioVenta, ubicacion, lote, fechaVencimiento, estado, idCategoria
        FROM producto WHERE stockActual < stockMinimo ORDER BY stockActual ASC`
     );
     const rows = getRows(result);
@@ -59,7 +52,6 @@ const listarFaltantes = async (req, res) => {
   }
 };
 
-// GET /inventario/buscar?q=texto
 const buscarInventario = async (req, res) => {
   const term = (req.query.q || req.query.nombre || '').trim();
   if (!term) {
@@ -70,7 +62,7 @@ const buscarInventario = async (req, res) => {
     const likeTerm = `%${term}%`;
     const result = await db.query(
       `SELECT idProducto AS id, codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo,
-              precioVenta, precioCompra, ubicacion, fechaVencimiento, idCategoria, idProveedor
+              unidadMedida, precioCompra, precioVenta, ubicacion, lote, fechaVencimiento, estado, idCategoria
        FROM producto WHERE nombre LIKE ? OR descripcion LIKE ? OR codigo LIKE ? ORDER BY nombre ASC`,
       [likeTerm, likeTerm, likeTerm]
     );
@@ -81,7 +73,6 @@ const buscarInventario = async (req, res) => {
   }
 };
 
-// POST /inventario
 const crearProducto = async (req, res) => {
   const {
     codigo = null,
@@ -90,16 +81,20 @@ const crearProducto = async (req, res) => {
     stockActual = 0,
     stockMinimo = 0,
     stockMaximo = null,
+    unidadMedida,
     precioCompra = 0,
     precioVenta = 0,
     ubicacion = '',
+    lote = null,
     fechaVencimiento = null,
     idCategoria = null,
-    idProveedor = null,
   } = req.body || {};
 
   if (!nombre) {
     return res.status(400).json({ ok: false, message: 'El nombre del producto es obligatorio' });
+  }
+  if (!unidadMedida) {
+    return res.status(400).json({ ok: false, message: 'La unidad de medida es obligatoria' });
   }
 
   try {
@@ -110,19 +105,20 @@ const crearProducto = async (req, res) => {
       toNumber(stockActual),
       toNumber(stockMinimo),
       stockMaximo !== null ? toNumber(stockMaximo) : null,
-      toNumber(precioVenta),
       toNumber(precioCompra),
+      toNumber(precioVenta),
+      unidadMedida,
       ubicacion || '',
+      lote || null,
       fechaVencimiento || null,
       idCategoria || null,
-      idProveedor || null,
     ];
 
     const packet = getPacket(
       await db.query(
         `INSERT INTO producto
-        (codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo, precioVenta, precioCompra, ubicacion, fechaVencimiento, idCategoria, idProveedor)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo, precioCompra, precioVenta, unidadMedida, ubicacion, lote, fechaVencimiento, idCategoria)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         payload
       )
     );
@@ -137,7 +133,6 @@ const crearProducto = async (req, res) => {
   }
 };
 
-// PUT /inventario/:id
 const actualizarProducto = async (req, res) => {
   const id = Number(req.params.id);
   const {
@@ -147,12 +142,13 @@ const actualizarProducto = async (req, res) => {
     stockActual = 0,
     stockMinimo = 0,
     stockMaximo = null,
+    unidadMedida,
     precioCompra = 0,
     precioVenta = 0,
     ubicacion = '',
+    lote = null,
     fechaVencimiento = null,
     idCategoria = null,
-    idProveedor = null,
   } = req.body || {};
 
   if (!id) {
@@ -161,6 +157,9 @@ const actualizarProducto = async (req, res) => {
 
   if (!nombre) {
     return res.status(400).json({ ok: false, message: 'El nombre del producto es obligatorio' });
+  }
+  if (!unidadMedida) {
+    return res.status(400).json({ ok: false, message: 'La unidad de medida es obligatoria' });
   }
 
   try {
@@ -171,12 +170,13 @@ const actualizarProducto = async (req, res) => {
       toNumber(stockActual),
       toNumber(stockMinimo),
       stockMaximo !== null ? toNumber(stockMaximo) : null,
-      toNumber(precioVenta),
       toNumber(precioCompra),
+      toNumber(precioVenta),
+      unidadMedida,
       ubicacion || '',
+      lote || null,
       fechaVencimiento || null,
       idCategoria || null,
-      idProveedor || null,
       id,
     ];
 
@@ -184,7 +184,7 @@ const actualizarProducto = async (req, res) => {
       await db.query(
         `UPDATE producto
          SET codigo = ?, nombre = ?, descripcion = ?, stockActual = ?, stockMinimo = ?, stockMaximo = ?,
-             precioVenta = ?, precioCompra = ?, ubicacion = ?, fechaVencimiento = ?, idCategoria = ?, idProveedor = ?
+             precioCompra = ?, precioVenta = ?, unidadMedida = ?, ubicacion = ?, lote = ?, fechaVencimiento = ?, idCategoria = ?
          WHERE idProducto = ?`,
         payload
       )

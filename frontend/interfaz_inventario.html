@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>Inventario</title>
-    <link rel="stylesheet" href="estilos/interfaz_inventario.css" />
+    <link rel="stylesheet" href="estilos/interfaz.css" />
   </head>
   <body>
     <h1>Inventario</h1>
@@ -37,16 +37,16 @@
           <input type="text" id="descripcion" />
         </label>
         <label
+          >Unidad de medida
+          <input type="text" id="unidadMedida" />
+        </label>
+        <label
           >Ubicacion
           <input type="text" id="ubicacion" />
         </label>
         <label
           >Categoria
           <select id="idCategoria"></select>
-        </label>
-        <label
-          >Proveedor
-          <select id="idProveedor"></select>
         </label>
         <label
           >Stock actual
@@ -73,6 +73,10 @@
             step="0.01"
             value="0"
           />
+        </label>
+        <label
+          >Lote
+          <input type="text" id="lote" />
         </label>
         <label
           >Fecha vencimiento
@@ -110,12 +114,12 @@
           <label style="min-width: 180px">
             Ver productos
             <select id="filtro-nivel-bottom">
-              <option value="todos">Stock actual (todos)</option>
-              <option value="bajo">Bajos en stock</option>
-              <option value="alto">Altos en stock</option>
+            <option value="todos">Stock actual (todos)</option>
+            <option value="bajo">Bajos en stock</option>
             </select>
           </label>
         </div>
+
         <button id="btn-reportar" class="primary">Imprimir</button>
       </div>
       <table>
@@ -125,21 +129,24 @@
             <th>Codigo</th>
             <th>Nombre</th>
             <th>Descripcion</th>
+            <th>Unidad</th>
             <th>Stock actual</th>
             <th>Stock minimo</th>
             <th>Stock maximo</th>
             <th>Precio venta</th>
             <th>Precio compra</th>
             <th>Ubicacion</th>
+            <th>Lote</th>
             <th>Fecha vencimiento</th>
             <th>Categoria</th>
-            <th>Proveedor</th>
           </tr>
         </thead>
         <tbody id="tabla-body"></tbody>
       </table>
     </section>
 
+
+    
     <script>
       const API_BASE = "http://localhost:3000/inventario";
       const tablaBody = document.getElementById("tabla-body");
@@ -150,12 +157,6 @@
         { id: "", nombre: "Seleccione" },
         { id: 1, nombre: "Categoria 1" },
         { id: 2, nombre: "Categoria 2" },
-      ];
-
-      const proveedoresDemo = [
-        { id: "", nombre: "Seleccione" },
-        { id: 1, nombre: "Proveedor 1" },
-        { id: 2, nombre: "Proveedor 2" },
       ];
 
       const fillSelect = (selectId, items) => {
@@ -170,7 +171,6 @@
       };
 
       fillSelect("idCategoria", categoriasDemo);
-      fillSelect("idProveedor", proveedoresDemo);
     
 
       const limpiarTabla = () => {
@@ -203,19 +203,20 @@
           <td>${item.codigo ?? ""}</td>
           <td>${item.nombre ?? ""}</td>
           <td>${item.descripcion ?? ""}</td>
+          <td>${item.unidadMedida ?? ""}</td>
           <td>${item.stockActual ?? 0}</td>
           <td>${item.stockMinimo ?? 0}</td>
           <td>${item.stockMaximo ?? ""}</td>
           <td>${item.precioVenta ?? 0}</td>
           <td>${item.precioCompra ?? 0}</td>
           <td>${item.ubicacion ?? ""}</td>
+          <td>${item.lote ?? ""}</td>
           <td>${
             item.fechaVencimiento
               ? new Date(item.fechaVencimiento).toLocaleDateString()
               : ""
           }</td>
           <td>${item.idCategoria ?? ""}</td>
-          <td>${item.idProveedor ?? ""}</td>
         `;
           tablaBody.appendChild(tr);
         });
@@ -245,9 +246,9 @@
         codigo: document.getElementById("codigo").value.trim() || null,
         nombre: document.getElementById("nombre").value.trim(),
         descripcion: document.getElementById("descripcion").value.trim(),
+        unidadMedida: document.getElementById("unidadMedida").value.trim(),
         ubicacion: document.getElementById("ubicacion").value.trim(),
         idCategoria: document.getElementById("idCategoria").value || null,
-        idProveedor: document.getElementById("idProveedor").value || null,
         stockActual: Number(document.getElementById("stockActual").value || 0),
         stockMinimo: Number(document.getElementById("stockMinimo").value || 0),
         stockMaximo: Number(document.getElementById("stockMaximo").value || 0),
@@ -255,6 +256,7 @@
         precioCompra: Number(
           document.getElementById("precioCompra").value || 0
         ),
+        lote: document.getElementById("lote").value.trim() || null,
         fechaVencimiento:
           document.getElementById("fechaVencimiento").value || null,
       });
@@ -269,20 +271,26 @@
         document.getElementById("precioVenta").value = 0;
         document.getElementById("precioCompra").value = 0;
         document.getElementById("idCategoria").value = "";
-        document.getElementById("idProveedor").value = "";
+        document.getElementById("unidadMedida").value = "";
+        document.getElementById("lote").value = "";
       };
 
-      const cargarNivel = async (nivel) => {
-        const query =
-          nivel && nivel !== "todos"
-            ? `?nivel=${encodeURIComponent(nivel)}`
-            : "";
-        const data = await apiFetch(`${API_BASE}${query}`);
-        setDatos(data.data || []);
-        const bottomSelect = document.getElementById("filtro-nivel-bottom");
-        if (bottomSelect && nivel) bottomSelect.value = nivel;
-      };
+      const cargarNivel = async (nivel = "todos") => {
+      try {
+      let data;
+      if (nivel === "bajo") {
+      data = await apiFetch(`${API_BASE}/faltantes`);
+    } else {
+      // Por defecto o "todos"
+      data = await apiFetch(`${API_BASE}`);
+    }
+    setDatos(data.data || []);
+  } catch (err) {
+    mostrarMensaje(err.message, "error");
+  }
+};
 
+      // Event listeners
       document
         .getElementById("btn-buscar")
         .addEventListener("click", async () => {
@@ -372,24 +380,13 @@
         .getElementById("btn-reportar")
         .addEventListener("click", () => window.print());
 
+
       document
-        .getElementById("filtro-nivel")
-        .addEventListener("change", async (e) => {
-          try {
-            await cargarNivel(e.target.value);
-          } catch (err) {
-            mostrarMensaje(err.message, "error");
-          }
-        });
-      document
-        .getElementById("filtro-nivel-bottom")
-        .addEventListener("change", async (e) => {
-          try {
-            await cargarNivel(e.target.value);
-          } catch (err) {
-            mostrarMensaje(err.message, "error");
-          }
-        });
+      .getElementById("filtro-nivel-bottom")
+      .addEventListener("change", (e) => {
+    cargarNivel(e.target.value);
+  });
+
 
       // Carga inicial
       cargarNivel("todos").catch(() => {});

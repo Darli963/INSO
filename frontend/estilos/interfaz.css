@@ -110,3 +110,11 @@ tr.alto {
     display: none;
   }
 }
+
+.notificaciones .card {
+  background: #f0f4fa;
+  border: 1px solid #c7ccd4;
+  border-radius: 6px;
+  padding: 10px;
+  max-width: 300px;
+}

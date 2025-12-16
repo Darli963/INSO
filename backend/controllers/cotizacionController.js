@@ -9,7 +9,7 @@ const getRows = (result) => {
 const listarProveedores = async (req, res) => {
   try {
     const result = await db.query(
-      'SELECT idProveedor AS id, nombre, email, telefono FROM proveedor ORDER BY nombre ASC'
+      'SELECT idProveedor AS id, razonSocial AS nombre, email, telefono FROM proveedor ORDER BY razonSocial ASC'
     )
     const rows = getRows(result)
     res.json({ ok: true, data: rows })
@@ -48,9 +48,18 @@ const enviarCotizacion = async (req, res) => {
       }
     }
 
+    const hoy = new Date()
+    const fechaSolicitud = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`
+    let total = 0
+    for (const item of items) {
+      const cantidad = Number(item.cantidad) || 0
+      const precioUnitario = item.precioUnitario != null ? Number(item.precioUnitario) : 0
+      total += cantidad * precioUnitario
+    }
+
     const insertRes = await db.query(
-      'INSERT INTO cotizacion (idProveedor, estado, observaciones) VALUES (?, ?, ?)',
-      [Number(proveedorId), 'PENDIENTE', observaciones]
+      'INSERT INTO cotizacion (fechaSolicitud, idProveedor, estado, observaciones, total) VALUES (?, ?, ?, ?, ?)',
+      [fechaSolicitud, Number(proveedorId), 'PENDIENTE', observaciones, total]
     )
     const idCotizacion = Array.isArray(insertRes) && insertRes[0]?.insertId ? insertRes[0].insertId : null
     if (!idCotizacion) {
@@ -60,10 +69,11 @@ const enviarCotizacion = async (req, res) => {
     for (const item of items) {
       const productoId = Number(item.productoId)
       const cantidad = Number(item.cantidad)
-      const precioUnitario = item.precioUnitario != null ? Number(item.precioUnitario) : null
+      const precioUnitario = item.precioUnitario != null ? Number(item.precioUnitario) : 0
+      const subtotal = cantidad * precioUnitario
       await db.query(
-        'INSERT INTO detalle_cotizacion (idCotizacion, idProducto, cantidad, precioUnitario) VALUES (?, ?, ?, ?)',
-        [idCotizacion, productoId, cantidad, precioUnitario]
+        'INSERT INTO detalle_cotizacion (idCotizacion, idProducto, cantidad, precioUnitario, subtotal, observacion) VALUES (?, ?, ?, ?, ?, ?)',
+        [idCotizacion, productoId, cantidad, precioUnitario, subtotal, null]
       )
     }
 

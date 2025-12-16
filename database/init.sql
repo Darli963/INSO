@@ -1,290 +1,285 @@
+-- ==============================================================
+-- SISTEMA DE COMPRAS - BASE DE DATOS CORREGIDA
+-- ==============================================================
+
 CREATE DATABASE IF NOT EXISTS sistema_compras 
   CHARACTER SET utf8mb4 
   COLLATE utf8mb4_unicode_ci;
 
 USE sistema_compras;
 
-CREATE TABLE IF NOT EXISTS proveedor (
-  idProveedor INT PRIMARY KEY AUTO_INCREMENT,
-  nombre VARCHAR(150) NOT NULL,
-  email VARCHAR(120),
-  telefono VARCHAR(30)
+-- ==============================================================
+-- TABLA: usuario
+-- ==============================================================
+CREATE TABLE IF NOT EXISTS usuario (
+  idUsuario INT PRIMARY KEY AUTO_INCREMENT,
+  nombre VARCHAR(100) NOT NULL,
+  email VARCHAR(245) NOT NULL UNIQUE,
+  passwordHash VARCHAR(255) NOT NULL,
+  rol VARCHAR(45) NOT NULL,
+  estado TINYINT(1) NOT NULL DEFAULT 1
 );
 
+-- ==============================================================
+-- TABLA: categoria_producto
+-- ==============================================================
+CREATE TABLE IF NOT EXISTS categoria_producto (
+  idCategoria INT PRIMARY KEY AUTO_INCREMENT,
+  nombreCategoria VARCHAR(100) NOT NULL,
+  descripcion VARCHAR(200),
+  estado VARCHAR(1) NOT NULL DEFAULT 'A'
+);
+
+-- ==============================================================
+-- TABLA: proveedor
+-- ==============================================================
+CREATE TABLE IF NOT EXISTS proveedor (
+  idProveedor INT PRIMARY KEY AUTO_INCREMENT,
+  ruc VARCHAR(11) UNIQUE,
+  razonSocial VARCHAR(100) NOT NULL,
+  nombreComercial VARCHAR(15),
+  telefono VARCHAR(20),
+  direccion VARCHAR(200),
+  email VARCHAR(100),
+  bancoTipoMoneda VARCHAR(20),
+  condicionPago VARCHAR(100),
+  estado VARCHAR(1) NOT NULL DEFAULT 'A'
+);
+
+-- ==============================================================
+-- TABLA: producto
+-- ==============================================================
 CREATE TABLE IF NOT EXISTS producto (
   idProducto INT PRIMARY KEY AUTO_INCREMENT,
-  codigo VARCHAR(50) UNIQUE,
+  codigo VARCHAR(50) UNIQUE NOT NULL,
   nombre VARCHAR(150) NOT NULL,
   descripcion VARCHAR(255),
   stockActual INT NOT NULL DEFAULT 0,
   stockMinimo INT NOT NULL DEFAULT 0,
   stockMaximo INT,
-  precioVenta DECIMAL(10,2) NOT NULL DEFAULT 0,
+  unidadMedida VARCHAR(30) NOT NULL,
   precioCompra DECIMAL(10,2) NOT NULL DEFAULT 0,
-  ubicacion VARCHAR(100),
+  precioVenta DECIMAL(10,2) NOT NULL DEFAULT 0,
+  ubicacion VARCHAR(50),
+  lote VARCHAR(50),
   fechaVencimiento DATE,
+  estado VARCHAR(1) NOT NULL DEFAULT 'A',
   idCategoria INT,
-  idProveedor INT,
   INDEX idx_producto_nombre (nombre),
-  INDEX idx_producto_idProveedor (idProveedor),
-  FOREIGN KEY (idProveedor) REFERENCES proveedor(idProveedor)
+  INDEX idx_producto_codigo (codigo),
+  INDEX idx_producto_idCategoria (idCategoria),
+  FOREIGN KEY (idCategoria) REFERENCES categoria_producto(idCategoria)
 );
 
+-- ==============================================================
+-- TABLA: recepcion
+-- ==============================================================
+CREATE TABLE IF NOT EXISTS recepcion (
+  idRecepcion INT PRIMARY KEY AUTO_INCREMENT,
+  fechaRecepcion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  tipoComprobante VARCHAR(50),
+  numComprobante VARCHAR(25),
+  idProveedor INT NOT NULL,
+  idUsuario INT NOT NULL,
+  INDEX idx_recepcion_proveedor (idProveedor),
+  INDEX idx_recepcion_usuario (idUsuario),
+  FOREIGN KEY (idProveedor) REFERENCES proveedor(idProveedor),
+  FOREIGN KEY (idUsuario) REFERENCES usuario(idUsuario)
+);
+
+-- ==============================================================
+-- TABLA: detalle_recepcion
+-- ==============================================================
+CREATE TABLE IF NOT EXISTS detalle_recepcion (
+  idDetalleRecepcion INT PRIMARY KEY AUTO_INCREMENT,
+  cantidad INT NOT NULL,
+  costoUnitario DECIMAL(10,2) NOT NULL,
+  observacion VARCHAR(255),
+  idRecepcion INT NOT NULL,
+  idProducto INT NOT NULL,
+  INDEX idx_detalle_recepcion_idRecepcion (idRecepcion),
+  INDEX idx_detalle_recepcion_idProducto (idProducto),
+  FOREIGN KEY (idRecepcion) REFERENCES recepcion(idRecepcion),
+  FOREIGN KEY (idProducto) REFERENCES producto(idProducto)
+);
+
+-- ==============================================================
+-- TABLA: orden_compra
+-- ==============================================================
+CREATE TABLE IF NOT EXISTS orden_compra (
+  idOrden INT PRIMARY KEY AUTO_INCREMENT,
+  codigo VARCHAR(20) NOT NULL UNIQUE,
+  fecha DATE NOT NULL,
+  fechaEntregaEstimada DATE,
+  subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
+  totalImpuesto DECIMAL(10,2) NOT NULL DEFAULT 0,
+  total DECIMAL(10,2) NOT NULL DEFAULT 0,
+  observaciones VARCHAR(255),
+  idProveedor INT NOT NULL,
+  idUsuario INT NOT NULL,
+  INDEX idx_orden_compra_proveedor (idProveedor),
+  INDEX idx_orden_compra_usuario (idUsuario),
+  FOREIGN KEY (idProveedor) REFERENCES proveedor(idProveedor),
+  FOREIGN KEY (idUsuario) REFERENCES usuario(idUsuario)
+);
+
+-- ==============================================================
+-- TABLA: detalle_orden_compra
+-- ==============================================================
+CREATE TABLE IF NOT EXISTS detalle_orden_compra (
+  idDetalleOC INT PRIMARY KEY AUTO_INCREMENT,
+  cantidad INT NOT NULL,
+  precioUnitario DECIMAL(10,2) NOT NULL,
+  subtotal DECIMAL(10,2) NOT NULL,
+  idOrden INT NOT NULL,
+  idProducto INT NOT NULL,
+  INDEX idx_detalle_oc_idOrden (idOrden),
+  INDEX idx_detalle_oc_idProducto (idProducto),
+  FOREIGN KEY (idOrden) REFERENCES orden_compra(idOrden),
+  FOREIGN KEY (idProducto) REFERENCES producto(idProducto)
+);
+
+-- ==============================================================
+-- TABLA: nota_pago
+-- ==============================================================
+CREATE TABLE IF NOT EXISTS nota_pago (
+  idPago INT PRIMARY KEY AUTO_INCREMENT,
+  num VARCHAR(10),
+  codigo VARCHAR(20) UNIQUE,
+  fechaPago DATE NOT NULL,
+  idOrden INT NOT NULL,
+  INDEX idx_nota_pago_idOrden (idOrden),
+  FOREIGN KEY (idOrden) REFERENCES orden_compra(idOrden)
+);
+
+-- ==============================================================
+-- TABLA: cotizacion
+-- ==============================================================
 CREATE TABLE IF NOT EXISTS cotizacion (
   idCotizacion INT PRIMARY KEY AUTO_INCREMENT,
-  fechaSolicitud DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  codigo VARCHAR(20),
+  fechaSolicitud DATE NOT NULL,
+  fechaRespuesta DATE,
+  estado VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE',
+  total DECIMAL(10,2),
+  observaciones VARCHAR(255),
   idProveedor INT NOT NULL,
-  estado ENUM('PENDIENTE','APROBADA','RECHAZADA') NOT NULL DEFAULT 'PENDIENTE',
-  observaciones TEXT,
+  INDEX idx_cotizacion_proveedor (idProveedor),
   FOREIGN KEY (idProveedor) REFERENCES proveedor(idProveedor)
 );
 
+-- ==============================================================
+-- TABLA: detalle_cotizacion
+-- ==============================================================
 CREATE TABLE IF NOT EXISTS detalle_cotizacion (
   idDetalle INT PRIMARY KEY AUTO_INCREMENT,
+  cantidad INT NOT NULL,
+  precioUnitario DECIMAL(10,2) NOT NULL,
+  subtotal DECIMAL(10,2) NOT NULL,
+  observacion VARCHAR(255),
   idCotizacion INT NOT NULL,
   idProducto INT NOT NULL,
-  cantidad INT NOT NULL,
-  precioUnitario DECIMAL(10,2),
-  INDEX idx_detalle_idCotizacion (idCotizacion),
+  INDEX idx_detalle_cotizacion_idCotizacion (idCotizacion),
+  INDEX idx_detalle_cotizacion_idProducto (idProducto),
   FOREIGN KEY (idCotizacion) REFERENCES cotizacion(idCotizacion),
   FOREIGN KEY (idProducto) REFERENCES producto(idProducto)
 );
 
-INSERT INTO proveedor (nombre, email, telefono) VALUES
-('Proveedor 1', 'prov1@example.com', '111-111'),
-('Proveedor 2', 'prov2@example.com', '222-222');
-
-INSERT INTO producto (codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo, precioVenta, precioCompra, ubicacion, fechaVencimiento, idCategoria, idProveedor) VALUES
-('P001','Alcohol 70%','Desinfectante',20,10,100,12.50,8.00,'A1',NULL,1,1),
-('P002','Guantes Nitrilo','Talla M',5,10,200,0.50,0.30,'B2',NULL,1,2),
-('P003','Mascarilla','Quirurgica',50,30,300,0.20,0.10,'C3',NULL,2,1),
-('P004','Gasas','Esteriles',8,15,150,2.00,1.20,'D4',NULL,2,2),
-('P005','Jeringas 5ml','Descartables',100,50,500,0.80,0.40,'E5',NULL,3,1),
-('P006','Suero Fisiologico','500ml',12,20,200,4.00,2.20,'F6',NULL,3,2),
-('P007','Termómetro','Digital',3,5,50,15.00,9.00,'G7',NULL,4,1),
-('P008','Desinfectante piso','Industrial',40,20,200,6.00,3.50,'H8',NULL,4,2),
-('P009','Toallas','Papel',25,10,150,1.50,0.90,'I9',NULL,5,1),
-('P010','Batas','Desechables',7,12,100,3.00,1.80,'J10',NULL,5,2);
-
+-- ==============================================================
 -- DATOS DE PRUEBA
+-- ==============================================================
 
-CREATE TABLE IF NOT EXISTS roles (
-  id_rol TINYINT PRIMARY KEY AUTO_INCREMENT,
-  nombre_rol VARCHAR(50) NOT NULL UNIQUE
-);
+-- Insertar usuarios
+INSERT INTO usuario (nombre, email, passwordHash, rol, estado) VALUES
+('Juan Torres (Gerente)', 'juan.gerente@botica.com', 'hash123', 'GERENTE', 1),
+('Kiara Aguilar (Asistente)', 'kiara.asistente@botica.com', 'hash123', 'ASISTENTE', 1),
+('Lorena Vásquez (Resp. Almacén)', 'lorena.almacen@botica.com', 'hash123', 'RESPONSABLE_ALMACEN', 1),
+('Jorge López (Contabilidad)', 'jorge.conta@botica.com', 'hash123', 'CONTABILIDAD', 1);
 
-CREATE TABLE IF NOT EXISTS usuarios (
-  id_usuario INT PRIMARY KEY AUTO_INCREMENT,
-  nombre_completo VARCHAR(120) NOT NULL,
-  correo VARCHAR(120) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
-  id_rol TINYINT NOT NULL,
-  activo TINYINT(1) NOT NULL DEFAULT 1,
-  FOREIGN KEY (id_rol) REFERENCES roles(id_rol)
-);
+-- Insertar categorías
+INSERT INTO categoria_producto (nombreCategoria, descripcion, estado) VALUES
+('Medicamentos', 'Productos farmacéuticos', 'A'),
+('Material Médico', 'Instrumentos y material médico', 'A'),
+('Insumos', 'Insumos hospitalarios', 'A'),
+('Equipamiento', 'Equipos médicos', 'A'),
+('Limpieza', 'Productos de limpieza y desinfección', 'A');
 
-CREATE TABLE IF NOT EXISTS proveedores (
-  id_proveedor INT PRIMARY KEY AUTO_INCREMENT,
-  razon_social VARCHAR(150) NOT NULL,
-  ruc VARCHAR(11),
-  telefono VARCHAR(20),
-  correo VARCHAR(120),
-  direccion VARCHAR(200),
-  estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO'
-);
+-- Insertar proveedores
+INSERT INTO proveedor (ruc, razonSocial, nombreComercial, telefono, direccion, email, bancoTipoMoneda, condicionPago, estado) VALUES
+('20123456789', 'Distribuidora Farma Norte S.A.C.', 'Farma Norte', '944111222', 'Av. Salud 123 - Trujillo', 'contacto@farmanorte.com', 'BCP - Soles', 'Crédito 30 días', 'A'),
+('20456789123', 'Servicios Médicos del Norte S.A.C.', 'Med Norte', '944333444', 'Jr. Bienestar 456 - Trujillo', 'ventas@serviciosmednorte.com', 'BBVA - Soles', 'Contado', 'A'),
+('20987654321', 'Productos Naturales Vitales S.A.', 'Vitales', '944555666', 'Av. Naturaleza 789 - Trujillo', 'info@vitales.com', 'Interbank - Soles', 'Crédito 15 días', 'A');
 
-CREATE TABLE IF NOT EXISTS productos (
-  id_producto INT PRIMARY KEY AUTO_INCREMENT,
-  nombre VARCHAR(150) NOT NULL,
-  descripcion VARCHAR(255),
-  unidad_medida VARCHAR(30) NOT NULL,
-  stock_minimo INT NOT NULL DEFAULT 0,
-  estado ENUM('ACTIVO','INACTIVO') NOT NULL DEFAULT 'ACTIVO'
-);
+-- Insertar productos
+INSERT INTO producto (codigo, nombre, descripcion, stockActual, stockMinimo, stockMaximo, unidadMedida, precioCompra, precioVenta, ubicacion, estado, idCategoria) VALUES
+('P001', 'Paracetamol 500mg', 'Tabletas analgésicas', 200, 50, 500, 'tableta', 0.40, 0.80, 'A1-EST1', 'A', 1),
+('P002', 'Ibuprofeno 400mg', 'Tabletas antiinflamatorias', 150, 40, 400, 'tableta', 0.45, 0.90, 'A1-EST2', 'A', 1),
+('P003', 'Amoxicilina 500mg', 'Cápsulas antibiótico', 100, 30, 300, 'cápsula', 0.55, 1.10, 'A2-EST1', 'A', 1),
+('P004', 'Omeprazol 20mg', 'Cápsulas gastroresistentes', 80, 25, 250, 'cápsula', 0.50, 1.00, 'A2-EST2', 'A', 1),
+('P005', 'Jarabe para la tos', 'Jarabe pediátrico 120ml', 50, 15, 150, 'frasco', 18.90, 35.00, 'B1-EST1', 'A', 1),
+('P006', 'Guantes Nitrilo', 'Talla M, caja x100', 20, 10, 100, 'caja', 25.00, 45.00, 'C1-EST1', 'A', 2),
+('P007', 'Mascarilla Quirúrgica', 'Caja x50 unidades', 150, 50, 300, 'caja', 8.50, 15.00, 'C1-EST2', 'A', 2),
+('P008', 'Termómetro Digital', 'Termómetro infrarrojo', 15, 5, 30, 'unidad', 45.00, 85.00, 'D1-EST1', 'A', 4),
+('P009', 'Alcohol 70%', 'Desinfectante 1 litro', 80, 30, 200, 'litro', 8.00, 15.00, 'E1-EST1', 'A', 5),
+('P010', 'Gasas Estériles', 'Paquete x100 unidades', 60, 20, 150, 'paquete', 12.00, 22.00, 'C2-EST1', 'A', 2);
 
-CREATE TABLE IF NOT EXISTS catalogo_productos (
-  id_catalogo INT PRIMARY KEY AUTO_INCREMENT,
-  id_proveedor INT NOT NULL,
-  id_producto INT NOT NULL,
-  presentacion VARCHAR(100),
-  precio_unitario DECIMAL(10,2) NOT NULL,
-  tiempo_entrega_dias INT,
-  FOREIGN KEY (id_proveedor) REFERENCES proveedores(id_proveedor),
-  FOREIGN KEY (id_producto) REFERENCES productos(id_producto),
-  UNIQUE KEY uk_prov_prod (id_proveedor, id_producto)
-);
+-- Insertar recepciones
+INSERT INTO recepcion (fechaRecepcion, tipoComprobante, numComprobante, idProveedor, idUsuario) VALUES
+('2025-05-14 10:30:00', 'FACTURA', 'F001-00123', 1, 3),
+('2025-05-16 14:15:00', 'FACTURA', 'F001-00145', 2, 3);
 
-CREATE TABLE IF NOT EXISTS cotizaciones (
-  id_cotizacion INT PRIMARY KEY AUTO_INCREMENT,
-  fecha_solicitud DATE NOT NULL,
-  fecha_respuesta DATE,
-  id_proveedor INT NOT NULL,
-  id_usuario_solicita INT NOT NULL,
-  estado ENUM('PENDIENTE','APROBADA','RECHAZADA') NOT NULL DEFAULT 'PENDIENTE',
-  observaciones TEXT,
-  FOREIGN KEY (id_proveedor) REFERENCES proveedores(id_proveedor),
-  FOREIGN KEY (id_usuario_solicita) REFERENCES usuarios(id_usuario)
-);
+-- Insertar detalles de recepción
+INSERT INTO detalle_recepcion (cantidad, costoUnitario, observacion, idRecepcion, idProducto) VALUES
+(200, 0.40, 'Lote L2025PARA01, Venc: 2027-05-01', 1, 1),
+(150, 0.45, 'Lote L2025IBU01, Venc: 2027-06-01', 1, 2),
+(100, 0.55, 'Lote L2025AMX01, Venc: 2026-12-01', 2, 3),
+(50, 18.90, 'Lote L2025JAR01, Venc: 2026-08-01', 2, 5);
 
-CREATE TABLE IF NOT EXISTS detalle_cotizaciones (
-  id_detalle INT PRIMARY KEY AUTO_INCREMENT,
-  id_cotizacion INT NOT NULL,
-  id_producto INT NOT NULL,
-  cantidad INT NOT NULL,
-  precio_unitario DECIMAL(10,2) NOT NULL,
-  FOREIGN KEY (id_cotizacion) REFERENCES cotizaciones(id_cotizacion),
-  FOREIGN KEY (id_producto) REFERENCES productos(id_producto)
-);
+-- Insertar órdenes de compra
+INSERT INTO orden_compra (codigo, fecha, fechaEntregaEstimada, subtotal, totalImpuesto, total, observaciones, idProveedor, idUsuario) VALUES
+('OC-2025-001', '2025-05-12', '2025-05-14', 147.50, 26.55, 174.05, 'Pedido urgente de analgésicos', 1, 1),
+('OC-2025-002', '2025-05-15', '2025-05-18', 1000.00, 180.00, 1180.00, 'Pedido mensual de insumos', 2, 1);
 
-CREATE TABLE IF NOT EXISTS ordenes_compra (
-  id_orden INT PRIMARY KEY AUTO_INCREMENT,
-  codigo VARCHAR(20) NOT NULL UNIQUE,
-  fecha_emision DATE NOT NULL,
-  id_proveedor INT NOT NULL,
-  id_cotizacion INT,
-  id_usuario_solicita INT NOT NULL,
-  id_usuario_aprueba INT,
-  estado ENUM('PENDIENTE','APROBADA','ENVIADA','RECIBIDA','CANCELADA') NOT NULL DEFAULT 'PENDIENTE',
-  total DECIMAL(12,2) DEFAULT 0,
-  FOREIGN KEY (id_proveedor) REFERENCES proveedores(id_proveedor),
-  FOREIGN KEY (id_cotizacion) REFERENCES cotizaciones(id_cotizacion),
-  FOREIGN KEY (id_usuario_solicita) REFERENCES usuarios(id_usuario),
-  FOREIGN KEY (id_usuario_aprueba) REFERENCES usuarios(id_usuario)
-);
+-- Insertar detalles de orden de compra
+INSERT INTO detalle_orden_compra (cantidad, precioUnitario, subtotal, idOrden, idProducto) VALUES
+(200, 0.40, 80.00, 1, 1),
+(150, 0.45, 67.50, 1, 2),
+(100, 0.55, 55.00, 2, 3),
+(50, 18.90, 945.00, 2, 5);
 
-CREATE TABLE IF NOT EXISTS detalle_orden_compra (
-  id_detalle INT PRIMARY KEY AUTO_INCREMENT,
-  id_orden INT NOT NULL,
-  id_producto INT NOT NULL,
-  cantidad INT NOT NULL,
-  precio_unitario DECIMAL(10,2) NOT NULL,
-  FOREIGN KEY (id_orden) REFERENCES ordenes_compra(id_orden),
-  FOREIGN KEY (id_producto) REFERENCES productos(id_producto)
-);
+-- Insertar notas de pago
+INSERT INTO nota_pago (num, codigo, fechaPago, idOrden) VALUES
+('0001', 'NP-2025-001', '2025-05-15', 1),
+('0002', 'NP-2025-002', '2025-05-20', 2);
 
-CREATE TABLE IF NOT EXISTS recepciones (
-  id_recepcion INT PRIMARY KEY AUTO_INCREMENT,
-  id_orden INT NOT NULL,
-  fecha_recepcion DATE NOT NULL,
-  id_usuario_recepciona INT NOT NULL,
-  estado ENUM('PENDIENTE','COMPLETA','PARCIAL','CON_RECLAMO') NOT NULL DEFAULT 'PENDIENTE',
-  observaciones TEXT,
-  FOREIGN KEY (id_orden) REFERENCES ordenes_compra(id_orden),
-  FOREIGN KEY (id_usuario_recepciona) REFERENCES usuarios(id_usuario)
-);
+-- Insertar cotizaciones
+INSERT INTO cotizacion (codigo, fechaSolicitud, fechaRespuesta, estado, total, observaciones, idProveedor) VALUES
+('COT-2025-001', '2025-05-10', '2025-05-11', 'APROBADA', 147.50, 'Cotización analgésicos - Aprobada', 1),
+('COT-2025-002', '2025-05-12', NULL, 'PENDIENTE', 1000.00, 'Cotización mensual insumos', 2);
 
-CREATE TABLE IF NOT EXISTS productos_recepcion (
-  id_detalle INT PRIMARY KEY AUTO_INCREMENT,
-  id_recepcion INT NOT NULL,
-  id_producto INT NOT NULL,
-  cantidad_recibida INT NOT NULL,
-  lote VARCHAR(50),
-  fecha_vencimiento DATE,
-  estado_producto ENUM('OK','DANADO') DEFAULT 'OK',
-  FOREIGN KEY (id_recepcion) REFERENCES recepciones(id_recepcion),
-  FOREIGN KEY (id_producto) REFERENCES productos(id_producto)
-);
+-- Insertar detalles de cotización
+INSERT INTO detalle_cotizacion (cantidad, precioUnitario, subtotal, observacion, idCotizacion, idProducto) VALUES
+(200, 0.40, 80.00, 'Paracetamol 500mg', 1, 1),
+(150, 0.45, 67.50, 'Ibuprofeno 400mg', 1, 2),
+(100, 0.55, 55.00, 'Amoxicilina 500mg', 2, 3),
+(50, 18.90, 945.00, 'Jarabe para la tos', 2, 5);
 
-CREATE TABLE IF NOT EXISTS notas_pago (
-  id_pago INT PRIMARY KEY AUTO_INCREMENT,
-  id_orden INT NOT NULL,
-  fecha_pago DATE NOT NULL,
-  monto_total DECIMAL(12,2) NOT NULL,
-  medio_pago ENUM('TRANSFERENCIA','EFECTIVO','TARJETA') NOT NULL,
-  estado ENUM('PENDIENTE','PAGADO','ANULADO') NOT NULL DEFAULT 'PENDIENTE',
-  referencia VARCHAR(100),
-  FOREIGN KEY (id_orden) REFERENCES ordenes_compra(id_orden)
-);
+-- ==============================================================
+-- CONSULTAS DE VERIFICACIÓN
+-- ==============================================================
 
-CREATE TABLE IF NOT EXISTS incidencias_recepcion (
-  id_incidencia INT PRIMARY KEY AUTO_INCREMENT,
-  id_recepcion INT NOT NULL,
-  tipo ENUM('FALTANTE','DANADO','VENCIDO','OTRO') NOT NULL,
-  descripcion TEXT NOT NULL,
-  resuelto TINYINT(1) NOT NULL DEFAULT 0,
-  FOREIGN KEY (id_recepcion) REFERENCES recepciones(id_recepcion)
-);
+-- Verificar estructura de la base de datos
+-- SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_KEY
+-- FROM INFORMATION_SCHEMA.COLUMNS
+-- WHERE TABLE_SCHEMA = 'sistema_compras'
+-- ORDER BY TABLE_NAME, ORDINAL_POSITION;
 
-INSERT INTO roles (nombre_rol) VALUES 
- ('GERENTE'), 
- ('ASISTENTE'), 
- ('RESPONSABLE_ALMACEN'), 
- ('CONTABILIDAD');
-
-INSERT INTO usuarios (nombre_completo, correo, password_hash, id_rol) VALUES 
- ('Juan Torres (Gerente)', 'juan.gerente@botica.com', 'hash123', 1), 
- ('Kiara Aguilar (Asistente)', 'kiara.asistente@botica.com', 'hash123', 2), 
- ('Lorena Vásquez (Resp. Almacén)', 'lorena.almacen@botica.com', 'hash123', 3), 
- ('Jorge López (Contabilidad)', 'jorge.conta@botica.com', 'hash123', 4);
-
-INSERT INTO proveedores (razon_social, ruc, telefono, correo, direccion) VALUES 
- ('Distribuidora Farma Norte S.A.C.', '20123456789', '944111222', 'contacto@farmanorte.com', 'Av. Salud 123 - Trujillo'), 
- ('Servicios Médicos del Norte S.A.C.', '20456789123', '944333444', 'ventas@serviciosmednorte.com', 'Jr. Bienestar 456 - Trujillo'), 
- ('Productos Naturales Vitales S.A.', '20987654321', '944555666', 'info@vitales.com', 'Av. Naturaleza 789 - Trujillo');
-
-INSERT INTO productos (nombre, descripcion, unidad_medida, stock_minimo) VALUES 
- ('Paracetamol 500 mg',       'Tabletas analgésicas', 'tableta', 20), 
- ('Ibuprofeno 400 mg',        'Tabletas antiinflamatorias', 'tableta', 15), 
- ('Amoxicilina 500 mg',       'Cápsulas antibiótico', 'cápsula', 10), 
- ('Omeprazol 20 mg',          'Cápsulas gastroresistentes', 'cápsula', 10), 
- ('Jarabe para la tos 120 ml','Jarabe pediátrico', 'frasco', 8);
-
-INSERT INTO catalogo_productos 
- (id_proveedor, id_producto, presentacion, precio_unitario, tiempo_entrega_dias) 
- VALUES 
- (1, 1, 'Caja x 100 tabletas', 35.50, 2), 
- (1, 2, 'Caja x 100 tabletas', 40.90, 2), 
- (2, 3, 'Caja x 50 cápsulas',  55.00, 3), 
- (2, 4, 'Caja x 50 cápsulas',  52.50, 3), 
- (3, 5, 'Frasco 120 ml',       18.90, 4);
-
-INSERT INTO cotizaciones 
- (fecha_solicitud, fecha_respuesta, id_proveedor, id_usuario_solicita, estado, observaciones) 
- VALUES 
- ('2025-05-10', '2025-05-11', 1, 1, 'APROBADA', 'Mejores precios para analgésicos'), 
- ('2025-05-12', NULL,         2, 1, 'PENDIENTE', 'Cotización antibióticos');
-
-INSERT INTO detalle_cotizaciones 
-(id_cotizacion, id_producto, cantidad, precio_unitario) 
-VALUES 
-(1, 1, 200, 0.40), 
-(1, 2, 150, 0.45), 
-(2, 3, 100, 0.55);
-
-INSERT INTO ordenes_compra 
- (codigo, fecha_emision, id_proveedor, id_cotizacion, 
-  id_usuario_solicita, id_usuario_aprueba, estado, total) 
- VALUES 
- ('OC-2025-001', '2025-05-12', 1, 1, 3, 1, 'ENVIADA', 155.00);
-
-INSERT INTO detalle_orden_compra 
- (id_orden, id_producto, cantidad, precio_unitario) 
- VALUES 
- (1, 1, 200, 0.40), 
- (1, 2, 150, 0.45);
-
-INSERT INTO recepciones 
- (id_orden, fecha_recepcion, id_usuario_recepciona, estado, observaciones) 
- VALUES 
- (1, '2025-05-14', 3, 'COMPLETA', 'Todo recibido correctamente');
-
-INSERT INTO productos_recepcion 
- (id_recepcion, id_producto, cantidad_recibida, lote, fecha_vencimiento, estado_producto) 
- VALUES 
- (1, 1, 200, 'L2025PARA01', '2027-05-01', 'OK'), 
- (1, 2, 150, 'L2025IBU01',  '2027-06-01', 'OK');
-
-INSERT INTO notas_pago 
- (id_orden, fecha_pago, monto_total, medio_pago, estado, referencia) 
- VALUES 
- (1, '2025-05-15', 155.00, 'TRANSFERENCIA', 'PAGADO', 'TRX-000123');
-
-INSERT INTO recepciones 
- (id_orden, fecha_recepcion, id_usuario_recepciona, estado, observaciones) 
- VALUES 
- (1, '2025-05-16', 3, 'CON_RECLAMO', '10 unidades de Amoxicilina dañadas');
-
-INSERT INTO incidencias_recepcion 
- (id_recepcion, tipo, descripcion, resuelto) 
- VALUES 
- (2, 'DANADO', 'Blísteres aplastados en el transporte', 0);
+-- Verificar relaciones (claves foráneas)
+-- SELECT 
+--   TABLE_NAME,
+--   COLUMN_NAME,
+--   REFERENCED_TABLE_NAME,
+--   REFERENCED_COLUMN_NAME
+-- FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+-- WHERE TABLE_SCHEMA = 'sistema_compras'
+--   AND REFERENCED_TABLE_NAME IS NOT NULL;
