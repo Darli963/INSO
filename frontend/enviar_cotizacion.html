@@ -8,9 +8,8 @@
   <body>
     <h1>Enviar Cotización</h1>
     <section>
-      <label>Proveedores
-        <select id="proveedores" multiple size="5"></select>
-      </label>
+      <h3>Proveedores</h3>
+      <div id="proveedores-list"></div>
       <div id="mensaje"></div>
     </section>
     <section>
@@ -32,7 +31,7 @@
     <script>
       const API_PROV = 'http://localhost:3000/cotizaciones/proveedores'
       const API_COTZ = 'http://localhost:3000/cotizaciones/enviar'
-      const proveedoresSel = document.getElementById('proveedores')
+      const proveedoresList = document.getElementById('proveedores-list')
       const tabla = document.getElementById('tabla')
       const mensaje = document.getElementById('mensaje')
       let productos = []
@@ -46,13 +45,20 @@
 
       const cargarProveedores = async () => {
         const d = await api(API_PROV)
-        proveedoresSel.innerHTML = ''
+        proveedoresList.innerHTML = ''
+        const cont = document.createElement('div')
+        cont.className = 'list'
         d.data.forEach(p => {
-          const o = document.createElement('option')
-          o.value = p.id
-          o.textContent = p.nombre
-          proveedoresSel.appendChild(o)
+          const lbl = document.createElement('label')
+          lbl.style.display = 'block'
+          const chk = document.createElement('input')
+          chk.type = 'checkbox'
+          chk.setAttribute('data-id', String(p.id))
+          lbl.appendChild(chk)
+          lbl.append(` ${p.nombre}`)
+          cont.appendChild(lbl)
         })
+        proveedoresList.appendChild(cont)
       }
 
       const cargarProductosSeleccionados = async () => {
@@ -79,7 +85,9 @@
 
       document.getElementById('btn-enviar').addEventListener('click', async () => {
         try {
-          const proveedorIds = Array.from(proveedoresSel.selectedOptions).map(o => Number(o.value)).filter(Boolean)
+          const proveedorIds = Array.from(document.querySelectorAll('#proveedores-list input[type="checkbox"][data-id]:checked'))
+            .map(chk => Number(chk.getAttribute('data-id')))
+            .filter(Boolean)
           const items = Array.from(document.querySelectorAll('input[type="number"][data-id]')).map(inp => ({
             productoId: Number(inp.getAttribute('data-id')),
             cantidad: Number(inp.value||1)
